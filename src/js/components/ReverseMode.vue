@@ -4,11 +4,12 @@
             <h1 class="h2">Обратная Марковская цепь</h1>
             <div class="btn-toolbar mb-2 mb-md-0">
                 <div class="btn-group mr-2">
-                    <button class="btn btn-sm btn-outline-secondary" @click="test">Тестировать</button>
+                    <button class="btn btn-sm btn-outline-primary" @click="test">Тестировать</button>
                     <button class="btn btn-sm btn-outline-secondary" :disabled="testResults !== false"
                             @click="step">
                         Шаг
                     </button>
+                    <button class="btn btn-sm btn-outline-secondary" @click="modalOpen">Сохранить</button>
                     <button class="btn btn-sm btn-outline-secondary" @click="clear">Очистить</button>
                 </div>
             </div>
@@ -81,17 +82,23 @@
             </div>
         </div>
         <div class="markov__model" v-html="modelRender"></div>
+
+        <modal v-if="modalShown" :buttons="modalButtons" @close="modalClose($event)">
+            <h3 slot="header" class="text-primary">Сохранить</h3>
+        </modal>
     </main>
 </template>
 
 <script>
-    import DataMatrix from "./DataMatrix";
     import Cell from "../classes/Cell";
-    import ReverseMarkovChain from "../classes/ReverseMarkovChain";
     import Transition from "../classes/Transition";
-    import {configFromMatrix, renderSvg} from "../modules/drawer";
     import TestResult from "../classes/TestResult";
+    import ReverseMarkovChain from "../classes/ReverseMarkovChain";
+    import DataMatrix from "./DataMatrix";
+    import Modal from "./Modal";
+    import {configFromMatrix, renderSvg} from "../modules/drawer";
     import copy from 'clipboard-copy';
+    import saveAs from 'file-saver';
 
     export default {
         name: 'ReverseMode',
@@ -110,10 +117,13 @@
                 chainEnd: false,
                 chain: [0],
                 copied: false,
+                modalShown: false,
+                modalButtons: [],
             };
         },
         components: {
             matrix: DataMatrix,
+            modal: Modal,
         },
         created() {
             let matrix = [];
@@ -152,6 +162,50 @@
             init() {
                 if (!this.reverse) {
                     this.reverse = new ReverseMarkovChain(this.modelSize, this.modelTransitions);
+                }
+            },
+            modalOpen() {
+                this.modalShown = true;
+                this.modalButtons = [
+                    {
+                        value: 'matrix',
+                        label: 'Матрицу интенсивностей',
+                    },
+                    {
+                        value: 'model',
+                        label: 'Модель',
+                    },
+                    {
+                        value: 'chains',
+                        label: 'Цепочки',
+                    },
+                ];
+            },
+            modalClose(mode) {
+                this.modalShown = false;
+                let text = '';
+                switch (mode) {
+                    case 'matrix':
+                        text += `N = ${this.modelSize}\n\n`;
+                        for (let i = 0; i < this.modelSize; i++) {
+                            for (let j = 0; j < this.modelSize; j++) {
+                                if (j > 0) {
+                                    text += ' ';
+                                }
+                                text += parseFloat(this.matrix[i][j].value).toFixed(3);
+                            }
+                            text += "\n";
+                        }
+                        saveAs(new Blob([text], {type: "text/plain;charset=utf-8"}), 'markov-matrix.txt');
+                        break;
+                    case 'model':
+                        saveAs(new Blob([this.modelRender], {type: "text/plain;charset=utf-8"}), 'markov-model.svg');
+                        break;
+                    case 'chains':
+                        text += `N = ${this.modelSize}\n\n`;
+                        text += this.model;
+                        saveAs(new Blob([text], {type: "text/plain;charset=utf-8"}), 'markov-chain.txt');
+                        break;
                 }
             },
             copyChain() {

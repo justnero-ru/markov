@@ -4,13 +4,14 @@
             <h1 class="h2">Прямая Марковская цепь</h1>
             <div class="btn-toolbar mb-2 mb-md-0">
                 <div class="btn-group mr-2">
-                    <button class="btn btn-sm btn-outline-secondary" @click="test">Тестировать</button>
+                    <button class="btn btn-sm btn-outline-primary" @click="test">Тестировать</button>
                     <button class="btn btn-sm btn-outline-secondary" :disabled="testResults !== false"
                             @click="step">Шаг
                     </button>
                     <button class="btn btn-sm btn-outline-secondary" :disabled="testResults !== false"
                             @click="normalize">Нормализовать
                     </button>
+                    <button class="btn btn-sm btn-outline-secondary" @click="modalOpen">Сохранить</button>
                     <button class="btn btn-sm btn-outline-secondary" @click="matrixClear">Очистить</button>
                 </div>
             </div>
@@ -75,6 +76,10 @@
             </div>
         </div>
         <div class="markov__model" v-html="model"></div>
+
+        <modal v-if="modalShown" :buttons="modalButtons" @close="modalClose($event)">
+            <h3 slot="header" class="text-primary">Сохранить</h3>
+        </modal>
     </main>
 </template>
 
@@ -84,8 +89,10 @@
     import TestResult from "../classes/TestResult";
     import Transition from "../classes/Transition";
     import DataMatrix from "./DataMatrix";
+    import Modal from "./Modal";
     import {configFromMatrix, renderSvg} from "../modules/drawer";
     import copy from 'clipboard-copy';
+    import saveAs from 'file-saver';
 
     export default {
         name: 'DirectMode',
@@ -100,13 +107,17 @@
                 stepCount: 100,
                 deadEnds: [],
                 testResults: false,
+                chains: false,
                 chainEnd: false,
                 chain: [0],
                 copied: false,
+                modalShown: false,
+                modalButtons: [],
             }
         },
         components: {
             matrix: DataMatrix,
+            modal: Modal,
         },
         asyncComputed: {
             model() {
@@ -144,10 +155,72 @@
                         setTimeout(() => this.copied = false, 750);
                     });
             },
+            modalOpen() {
+                this.modalShown = true;
+                this.modalButtons = [
+                    {
+                        value: 'matrix',
+                        label: 'Матрицу интенсивностей',
+                    },
+                    {
+                        value: 'model',
+                        label: 'Модель',
+                    },
+                    {
+                        value: 'chains',
+                        label: 'Цепочки',
+                    },
+                ];
+            },
+            modalClose(mode) {
+                this.modalShown = false;
+                let text = '';
+                switch (mode) {
+                    case 'matrix':
+                        text += `N = ${this.modelSize}\n\n`;
+                        for (let i = 0; i < this.modelSize; i++) {
+                            for (let j = 0; j < this.modelSize; j++) {
+                                if (j > 0) {
+                                    text += ' ';
+                                }
+                                text += parseFloat(this.matrix[i][j].value).toFixed(3);
+                            }
+                            text += "\n";
+                        }
+                        saveAs(new Blob([text], {type: "text/plain;charset=utf-8"}), 'markov-input.txt');
+                        break;
+                    case 'model':
+                        saveAs(new Blob([this.model], {type: "text/plain;charset=utf-8"}), 'markov-model.svg');
+                        break;
+                    case 'chains':
+                        text += `N = ${this.modelSize}\n\n`;
+                        if (this.chains === false) {
+                            for (let i = 0; i < this.chain.length; i++) {
+                                if (i > 0) {
+                                    text += ' ';
+                                }
+                                text += this.chain[i];
+                            }
+                            text += "\n";
+                        } else {
+                            for (let k = 0; k < this.chains.length; k++) {
+                                let chain = this.chains[k];
+                                text += chain[0].from;
+                                for (let i = 0; i < chain.length; i++) {
+                                    text += ` ${chain[i].to}`;
+                                }
+                                text += "\n";
+                            }
+                        }
+                        saveAs(new Blob([text], {type: "text/plain;charset=utf-8"}), 'markov-chain.txt');
+                        break;
+                }
+            },
             test() {
                 this.transition = false;
                 this.deadEnds = [];
                 this.testResults = false;
+                this.chains = [];
 
                 const direct = new DirectMarkovChain(JSON.parse(JSON.stringify(this.matrix)));
                 let testResults = direct.test(this.runCount, this.stepCount);
@@ -162,6 +235,7 @@
                     }
                 }
                 for (let k = 0; k < testResults.length; k++) {
+                    this.chains.push(testResults[k].chain);
                     if (testResults[k].stepCount < this.stepCount) {
                         deadEnds.push(testResults[k].lastPosition);
                     }
@@ -231,6 +305,7 @@
             matrixClear() {
                 if (this.testResults !== false) {
                     this.testResults = false;
+                    this.chains = false;
                 } else {
                     for (let i = 0; i < this.modelSize; i++) {
                         for (let j = 0; j < this.modelSize; j++) {

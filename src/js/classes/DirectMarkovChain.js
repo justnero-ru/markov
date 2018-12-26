@@ -21,7 +21,7 @@ export default class DirectMarkovChain {
             const sum = matrix[i].reduce((sum, cell) => sum + parseFloat(cell.value), 0);
             if (sum) {
                 for (let j = 0; j < size; j++) {
-                    matrix[i][j].value = (matrix[i][j].value / sum).toFixed(2);
+                    matrix[i][j].value = (matrix[i][j].value / sum).toFixed(3);
                 }
             }
         }

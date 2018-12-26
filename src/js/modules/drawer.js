@@ -54,7 +54,7 @@ export function configFromMatrix(matrix, stateVisits, transitions, transition, m
         }
         if (mode === 'frequencyState') {
             nodeStyles.push('shape=box');
-            nodeStyles.push(sprintf('label=<' + formatLabel + '<br/><br/>%s>', nodeId, (stateVisits ? parseFloat(stateVisits[nodeId]) / sum : 0).toFixed(2)));
+            nodeStyles.push(sprintf('label=<' + formatLabel + '<br/><br/>%s>', nodeId, (stateVisits ? parseFloat(stateVisits[nodeId]) / sum : 0).toFixed(3)));
         } else {
             nodeStyles.push(sprintf('label=<' + formatLabel + '>', nodeId));
         }
@@ -63,7 +63,7 @@ export function configFromMatrix(matrix, stateVisits, transitions, transition, m
             if (matrix[i][j].value > 0) {
                 let label = mode === 'frequencyTransition' ? (sum > 0 ? transitions[i][j].value / sum : 0) : matrix[i][j].value;
                 let transitionStyle = transition && transition.from === i && transition.to === j ? ', penwidth=3, color="0, 1, 1"' : '';
-                code += sprintf("\t%s -> %s [label=\"%s\"%s]\n", names[i], names[j], parseFloat(label).toFixed(2), transitionStyle);
+                code += sprintf("\t%s -> %s [label=\"%s\"%s]\n", names[i], names[j], parseFloat(label).toFixed(3), transitionStyle);
             }
         }
     }

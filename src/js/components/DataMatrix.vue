@@ -9,10 +9,9 @@
         <tbody>
         <tr v-for="(row, i) in matrix">
             <th>S<sub>{{ i }}</sub></th>
-            <td v-for="(cell, j) in row"
-                :class="{'zero': Math.abs(matrix[i][j].value) <= 1e-2,'same': compareTo && Math.abs(compareTo[i][j].value - matrix[i][j].value) <= 1e-2}">
-                <span v-if="change === false" v-text="matrix[i][j].value.toFixed(2)"></span>
-                <input v-else type="text" :name="'matrix['+i+']['+j+']'" :value="matrix[i][j].value"
+            <td v-for="(cell, j) in row" :class="{'zero': isZero(i,j),'same': isSame(i,j)}">
+                <span v-if="change === false" v-text="format(cell.value)"></span>
+                <input v-else type="text" :name="'matrix['+i+']['+j+']'" :value="cell.value"
                        @input="$emit('matrix-change', i, j, $event.target.value)">
             </td>
         </tr>
@@ -24,6 +23,17 @@
     export default {
         name: 'DataMatrix',
         props: ['change', 'modelSize', 'matrix', 'compareTo'],
+        methods: {
+            isZero(i, j) {
+                return Math.abs((this.compareTo ? this.compareTo : this.matrix)[i][j].value) <= 1 / 2 * 1e-3;
+            },
+            isSame(i, j) {
+                return this.compareTo && Math.abs(this.compareTo[i][j].value - this.matrix[i][j].value) <= (this.compareTo[i][j].value / 100) * 5;
+            },
+            format(value) {
+                return value.toFixed(3);
+            }
+        }
     }
 </script>
 

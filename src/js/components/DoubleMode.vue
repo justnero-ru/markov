@@ -6,6 +6,7 @@
                 <div class="btn-group mr-2">
                     <button class="btn btn-sm btn-outline-secondary" @click="test">Тестировать</button>
                     <button class="btn btn-sm btn-outline-secondary" @click="normalize">Нормализовать</button>
+                    <button class="btn btn-sm btn-outline-secondary" @click="modalOpen">Сохранить</button>
                     <button class="btn btn-sm btn-outline-secondary" @click="matrixClear">Очистить</button>
                 </div>
             </div>
@@ -71,18 +72,21 @@
                 <div class="markov__model flex-shrink-0" v-html="modelSecond"></div>
             </div>
         </div>
+
+        <modal v-if="modalShown" :buttons="modalButtons" @close="modalClose($event)">
+            <h3 slot="header" class="text-primary">Сохранить</h3>
+        </modal>
     </main>
 </template>
 
 <script>
     import DirectMarkovChain from "../classes/DirectMarkovChain";
+    import ReverseMarkovChain from "../classes/ReverseMarkovChain";
     import Cell from "../classes/Cell";
-    import TestResult from "../classes/TestResult";
     import Transition from "../classes/Transition";
     import DataMatrix from "./DataMatrix";
+    import Modal from "./Modal";
     import {configFromMatrix, renderSvg} from "../modules/drawer";
-    import copy from 'clipboard-copy';
-    import ReverseMarkovChain from "../classes/ReverseMarkovChain";
 
     export default {
         name: 'DoubleMode',
@@ -95,10 +99,13 @@
                 runCount: 5,
                 stepCount: 10,
                 chains: false,
+                modalShown: false,
+                modalButtons: [],
             }
         },
         components: {
             matrix: DataMatrix,
+            modal: Modal,
         },
         asyncComputed: {
             modelFirst() {
@@ -137,6 +144,84 @@
                 }
                 this.chains = chains;
                 this.generateSecondStep();
+            },
+            modalOpen() {
+                this.modalShown = true;
+                this.modalButtons = [
+                    {
+                        value: 'input-matrix',
+                        label: 'Первичная матрица интенсивностей',
+                    },
+                    {
+                        value: 'input-model',
+                        label: 'Первичная модель',
+                    },
+                    {
+                        value: 'chains',
+                        label: 'Цепочки',
+                    },
+                    {
+                        value: 'output-matrix',
+                        label: 'Вторичная матрица интенсивностей',
+                    },
+                    {
+                        value: 'output-model',
+                        label: 'Вторичная модель',
+                    },
+                ];
+            },
+            modalClose(mode) {
+                this.modalShown = false;
+                let text = '';
+                switch (mode) {
+                    case 'input-matrix':
+                        text += `N = ${this.modelSize}\n\n`;
+                        for (let i = 0; i < this.modelSize; i++) {
+                            for (let j = 0; j < this.modelSize; j++) {
+                                if (j > 0) {
+                                    text += ' ';
+                                }
+                                text += parseFloat(this.matrix[i][j].value).toFixed(3);
+                            }
+                            text += "\n";
+                        }
+                        saveAs(new Blob([text], {type: "text/plain;charset=utf-8"}), 'markov-input-matrix.txt');
+                        break;
+                    case 'input-model':
+                        saveAs(new Blob([this.modelFirst], {type: "text/plain;charset=utf-8"}), 'markov-input-model.svg');
+                        break;
+                    case 'chains':
+                        if (this.chains === false) {
+                            break;
+                        }
+                        text += `N = ${this.modelSize}\n\n`;
+                        for (let k = 0; k < this.chains.length; k++) {
+                            let chain = this.chains[k];
+                            text += chain[0].from;
+                            for (let i = 0; i < chain.length; i++) {
+                                text += ` ${chain[i].to}`;
+                            }
+                            text += "\n";
+                        }
+                        saveAs(new Blob([text], {type: "text/plain;charset=utf-8"}), 'markov-chain.txt');
+                        break;
+                    case 'output-matrix':
+                        text += `N = ${this.modelSize}\n\n`;
+                        for (let i = 0; i < this.modelSize; i++) {
+                            for (let j = 0; j < this.modelSize; j++) {
+                                if (j > 0) {
+                                    text += ' ';
+                                }
+                                text += parseFloat(this.matrixSecond[i][j].value).toFixed(3);
+                            }
+                            text += "\n";
+                        }
+                        saveAs(new Blob([text], {type: "text/plain;charset=utf-8"}), 'markov-output-matrix.txt');
+                        break;
+                    case 'output-model':
+                        saveAs(new Blob([this.modelSecond], {type: "text/plain;charset=utf-8"}), 'markov-input-model.svg');
+                        break;
+                }
             },
             generateSecondStep() {
                 let reverse = new ReverseMarkovChain(this.modelSize, this.chains.flat());
