@@ -8,7 +8,10 @@
                             default header
                         </slot>
                     </div>
-                    <div class="modal-footer">
+                    <div class="modal-body">
+                        <slot name="body"></slot>
+                    </div>
+                    <div class="modal-footer" v-if="buttons.length > 0">
                         <div class="btn-toolbar mb-2 mb-md-0">
                             <div class="btn-group">
                                 <button v-for="button in buttons" class="btn btn-sm btn-outline-secondary"

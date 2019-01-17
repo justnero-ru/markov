@@ -5,13 +5,14 @@
             <div class="btn-toolbar mb-2 mb-md-0">
                 <div class="btn-group mr-2">
                     <button class="btn btn-sm btn-outline-primary" @click="test">Тестировать</button>
-                    <button class="btn btn-sm btn-outline-secondary" :disabled="testResults !== false"
+                    <button class="btn btn-sm btn-outline-primary" :disabled="testResults !== false"
                             @click="step">Шаг
                     </button>
                     <button class="btn btn-sm btn-outline-secondary" :disabled="testResults !== false"
                             @click="normalize">Нормализовать
                     </button>
-                    <button class="btn btn-sm btn-outline-secondary" @click="modalOpen">Сохранить</button>
+                    <button class="btn btn-sm btn-outline-secondary" @click="modalSaveOpen">Сохранить</button>
+                    <button class="btn btn-sm btn-outline-secondary" @click="modalLoadOpen">Загрузить</button>
                     <button class="btn btn-sm btn-outline-secondary" @click="matrixClear">Очистить</button>
                 </div>
             </div>
@@ -47,6 +48,9 @@
             <h2>Модель</h2>
             <div class="btn-toolbar mb-2 mb-md-0">
                 <div class="btn-group mr-2">
+                    <button class="btn btn-sm btn-outline-primary" :disabled="testResults !== false"
+                            @click="step">Шаг
+                    </button>
                     <button :class="['btn', 'btn-sm', 'btn-outline-secondary', {'active': display === 'intensity'}]"
                             @click="display='intensity'">Интенсивность
                     </button>
@@ -78,7 +82,10 @@
         <div class="markov__model" v-html="model"></div>
 
         <modal v-if="modalShown" :buttons="modalButtons" @close="modalClose($event)">
-            <h3 slot="header" class="text-primary">Сохранить</h3>
+            <h3 slot="header" class="text-primary">{{ modalType === 'load' ? 'Загрузить' : 'Сохранить' }}</h3>
+            <div class="form-group" slot="body" v-if="modalType === 'load'">
+                <input type="file" @change="modalClose">
+            </div>
         </modal>
     </main>
 </template>
@@ -112,6 +119,7 @@
                 chain: [0],
                 copied: false,
                 modalShown: false,
+                modalType: '',
                 modalButtons: [],
             }
         },
@@ -155,8 +163,9 @@
                         setTimeout(() => this.copied = false, 750);
                     });
             },
-            modalOpen() {
+            modalSaveOpen() {
                 this.modalShown = true;
+                this.modalType = 'save';
                 this.modalButtons = [
                     {
                         value: 'matrix',
@@ -172,12 +181,25 @@
                     },
                 ];
             },
+            modalLoadOpen() {
+                this.modalShown = true;
+                this.modalType = 'load';
+                this.modalButtons = [];
+            },
             modalClose(mode) {
                 this.modalShown = false;
+                switch (this.modalType) {
+                    case 'save':
+                        return this.onModalSave(mode);
+                    case 'load':
+                        return this.onModalLoad(mode);
+                }
+            },
+            onModalSave(mode) {
                 let text = '';
                 switch (mode) {
                     case 'matrix':
-                        text += `N = ${this.modelSize}\n\n`;
+                        text += `N = ${this.modelSize}\r\n\r\n`;
                         for (let i = 0; i < this.modelSize; i++) {
                             for (let j = 0; j < this.modelSize; j++) {
                                 if (j > 0) {
@@ -185,7 +207,7 @@
                                 }
                                 text += parseFloat(this.matrix[i][j].value).toFixed(3);
                             }
-                            text += "\n";
+                            text += "\r\n";
                         }
                         saveAs(new Blob([text], {type: "text/plain;charset=utf-8"}), 'markov-input.txt');
                         break;
@@ -193,7 +215,7 @@
                         saveAs(new Blob([this.model], {type: "text/plain;charset=utf-8"}), 'markov-model.svg');
                         break;
                     case 'chains':
-                        text += `N = ${this.modelSize}\n\n`;
+                        text += `N = ${this.modelSize}\r\n\r\n`;
                         if (this.chains === false) {
                             for (let i = 0; i < this.chain.length; i++) {
                                 if (i > 0) {
@@ -201,7 +223,7 @@
                                 }
                                 text += this.chain[i];
                             }
-                            text += "\n";
+                            text += "\r\n";
                         } else {
                             for (let k = 0; k < this.chains.length; k++) {
                                 let chain = this.chains[k];
@@ -209,12 +231,61 @@
                                 for (let i = 0; i < chain.length; i++) {
                                     text += ` ${chain[i].to}`;
                                 }
-                                text += "\n";
+                                text += "\r\n";
                             }
                         }
                         saveAs(new Blob([text], {type: "text/plain;charset=utf-8"}), 'markov-chain.txt');
                         break;
                 }
+            },
+            onModalLoad(e) {
+                if (!e) {
+                    return false;
+                }
+                for (let file of e.target.files) {
+                    if (file.type !== 'text/plain') {
+                        continue;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = event => {
+                        const lines = event.target.result
+                            .split("\n")
+                            .map(line => line.trim());
+
+                        let [_, N] = lines[0].split('=').map(part => part.trim());
+
+                        if (N > 0) {
+                            const matrix = lines.slice(1)
+                                .filter(line => line.trim().length > 0)
+                                .map(line =>
+                                    line.split(' ')
+                                        .map(element =>
+                                            parseFloat(element.trim())
+                                        )
+                                );
+
+                            this.matrixClear();
+                            this.matrixClear();
+                            this.modelSize = N;
+
+                            let newMatrix = [];
+                            for (let line of matrix) {
+                                let row = [];
+                                for (let element of line) {
+                                    row.push(new Cell(element));
+                                }
+                                newMatrix.push(row);
+                            }
+                            this.matrix = newMatrix;
+                        } else {
+                            alert('Формат файла не поддерживается');
+                        }
+                    };
+                    reader.readAsText(file);
+
+                    return true;
+                }
+                alert('Формат файла не поддерживается');
             },
             test() {
                 this.transition = false;
@@ -312,7 +383,7 @@
                             this.matrix[i][j].clear();
                         }
                     }
-                    this.direct.reset();
+                    this.direct && this.direct.reset();
                     this.deadEnds = [];
                 }
             }

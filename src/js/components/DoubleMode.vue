@@ -4,9 +4,10 @@
             <h1 class="h2">Двухсторонняя Марковская цепь</h1>
             <div class="btn-toolbar mb-2 mb-md-0">
                 <div class="btn-group mr-2">
-                    <button class="btn btn-sm btn-outline-secondary" @click="test">Тестировать</button>
+                    <button class="btn btn-sm btn-outline-primary" @click="test">Тестировать</button>
                     <button class="btn btn-sm btn-outline-secondary" @click="normalize">Нормализовать</button>
-                    <button class="btn btn-sm btn-outline-secondary" @click="modalOpen">Сохранить</button>
+                    <button class="btn btn-sm btn-outline-secondary" @click="modalSaveOpen">Сохранить</button>
+                    <button class="btn btn-sm btn-outline-secondary" @click="modalLoadOpen">Загрузить</button>
                     <button class="btn btn-sm btn-outline-secondary" @click="matrixClear">Очистить</button>
                 </div>
             </div>
@@ -74,7 +75,10 @@
         </div>
 
         <modal v-if="modalShown" :buttons="modalButtons" @close="modalClose($event)">
-            <h3 slot="header" class="text-primary">Сохранить</h3>
+            <h3 slot="header" class="text-primary">{{ modalType === 'load' ? 'Загрузить' : 'Сохранить' }}</h3>
+            <div class="form-group" slot="body" v-if="modalType === 'load'">
+                <input type="file" @change="modalClose">
+            </div>
         </modal>
     </main>
 </template>
@@ -100,6 +104,7 @@
                 stepCount: 10,
                 chains: false,
                 modalShown: false,
+                modalType: '',
                 modalButtons: [],
             }
         },
@@ -145,8 +150,9 @@
                 this.chains = chains;
                 this.generateSecondStep();
             },
-            modalOpen() {
+            modalSaveOpen() {
                 this.modalShown = true;
+                this.modalType = 'save';
                 this.modalButtons = [
                     {
                         value: 'input-matrix',
@@ -170,8 +176,21 @@
                     },
                 ];
             },
+            modalLoadOpen() {
+                this.modalShown = true;
+                this.modalType = 'load';
+                this.modalButtons = [];
+            },
             modalClose(mode) {
                 this.modalShown = false;
+                switch (this.modalType) {
+                    case 'save':
+                        return this.onModalSave(mode);
+                    case 'load':
+                        return this.onModalLoad(mode);
+                }
+            },
+            onModalSave(mode) {
                 let text = '';
                 switch (mode) {
                     case 'input-matrix':
@@ -222,6 +241,55 @@
                         saveAs(new Blob([this.modelSecond], {type: "text/plain;charset=utf-8"}), 'markov-input-model.svg');
                         break;
                 }
+            },
+            onModalLoad(e) {
+                if (!e) {
+                    return false;
+                }
+                for (let file of e.target.files) {
+                    if (file.type !== 'text/plain') {
+                        continue;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = event => {
+                        const lines = event.target.result
+                            .split("\n")
+                            .map(line => line.trim());
+
+                        let [_, N] = lines[0].split('=').map(part => part.trim());
+
+                        if (N > 0) {
+                            const matrix = lines.slice(1)
+                                .filter(line => line.trim().length > 0)
+                                .map(line =>
+                                    line.split(' ')
+                                        .map(element =>
+                                            parseFloat(element.trim())
+                                        )
+                                );
+
+                            this.matrixClear();
+                            this.matrixClear();
+                            this.modelSize = N;
+
+                            let newMatrix = [];
+                            for (let line of matrix) {
+                                let row = [];
+                                for (let element of line) {
+                                    row.push(new Cell(element));
+                                }
+                                newMatrix.push(row);
+                            }
+                            this.matrix = newMatrix;
+                        } else {
+                            alert('Формат файла не поддерживается');
+                        }
+                    };
+                    reader.readAsText(file);
+
+                    return true;
+                }
+                alert('Формат файла не поддерживается');
             },
             generateSecondStep() {
                 let reverse = new ReverseMarkovChain(this.modelSize, this.chains.flat());
@@ -274,7 +342,7 @@
                             this.matrix[i][j].clear();
                         }
                     }
-                    this.direct.reset();
+                    this.direct && this.direct.reset();
                 }
             }
         }
