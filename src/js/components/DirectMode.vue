@@ -52,7 +52,7 @@
                             @click="step">Шаг
                     </button>
                     <button :class="['btn', 'btn-sm', 'btn-outline-secondary', {'active': display === 'intensity'}]"
-                            @click="display='intensity'">Интенсивность
+                            @click="display='intensity'">Вероятность
                     </button>
                     <button :class="['btn', 'btn-sm', 'btn-outline-secondary', {'active': display === 'frequencyTransition'}]"
                             @click="display='frequencyTransition'">Частота
@@ -169,7 +169,7 @@
                 this.modalButtons = [
                     {
                         value: 'matrix',
-                        label: 'Матрицу интенсивностей',
+                        label: 'Матрицу вероятностей',
                     },
                     {
                         value: 'model',

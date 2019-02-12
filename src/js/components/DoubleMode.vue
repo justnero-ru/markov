@@ -48,16 +48,28 @@
         </div>
 
         <div v-if="chains.length">
-            <h4 class="mt-4">Используемые цепочки для генерации обратной модели</h4>
-            <div class="d-flex justify-content-start flex-wrap">
-                <div v-for="chain in chains">
-                    <div v-if="chain.length > 0"
-                         class="markov__chain d-flex justify-content-start flex-wrap pt-2 pb-2 mr-5">
-                        <span>{{ chain[0].from}}</span>
-                        <span v-for="transition in chain">{{ transition.to }}</span>
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mt-4 mb-3 border-bottom">
+                <h4>Используемые цепочки для генерации обратной модели</h4>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group mr-2">
+                        <button class="btn btn-sm btn-outline-primary" @click="chainsShowed = !chainsShowed">
+                            {{ chainsShowed ? 'Скрыть' : 'Показать' }}
+                        </button>
                     </div>
                 </div>
             </div>
+            <transition name="dropdown">
+                <div class="d-flex justify-content-start flex-wrap"
+                     v-if="chainsShowed">
+                    <div v-for="chain in chains">
+                        <div v-if="chain.length > 0"
+                             class="markov__chain d-flex justify-content-start flex-wrap pt-2 pb-2 mr-5">
+                            <span>{{ chain[0].from}}</span>
+                            <span v-for="transition in chain">{{ transition.to }}</span>
+                        </div>
+                    </div>
+                </div>
+            </transition>
         </div>
         <div v-else class="d-flex justify-content-center flex-wrap flex-md-nowrap align-items-center">
             Проведите тестирование что бы построить цепочки на вход второго этапа
@@ -106,6 +118,7 @@
                 modalShown: false,
                 modalType: '',
                 modalButtons: [],
+                chainsShowed: false,
             }
         },
         components: {
@@ -156,7 +169,7 @@
                 this.modalButtons = [
                     {
                         value: 'input-matrix',
-                        label: 'Первичная матрица интенсивностей',
+                        label: 'Первичная матрица вероятностей',
                     },
                     {
                         value: 'input-model',
@@ -168,7 +181,7 @@
                     },
                     {
                         value: 'output-matrix',
-                        label: 'Вторичная матрица интенсивностей',
+                        label: 'Вторичная матрица вероятностей',
                     },
                     {
                         value: 'output-model',
