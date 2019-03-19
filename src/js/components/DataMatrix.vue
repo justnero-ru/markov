@@ -43,6 +43,9 @@
         data: () => ({
             mode: 'data',
         }),
+        created() {
+            this.$watch('matrix', (...args) => console.log('matrix change', args));
+        },
         computed: {
             canChangeMode() {
                 return this.change && this.eps === true;
@@ -110,7 +113,7 @@
                 return (eps * Math.round(value / eps)).toPrecision(Math.ceil(Math.log10(1 / eps)));
             },
             epsValue(x, y, display = true) {
-                if (this.eps === true ) {
+                if (this.eps === true) {
                     if (display) {
                         return this.compareTo ? this.compareTo[x][y].eps : this.matrix[x][y].eps;
                     }

@@ -67,7 +67,9 @@ const mutations = {
     clear(state) {
         for (let i = 0; i < state.size; i++) {
             for (let j = 0; j < state.size; j++) {
-                state.matrix[i][j] = new Cell();
+                state.matrix[i][j].stateVisits = 0;
+                state.matrix[i][j].value = 0;
+                state.matrix[i][j].eps = 0.001;
             }
         }
     },
