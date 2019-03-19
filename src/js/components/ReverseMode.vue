@@ -5,7 +5,7 @@
             <div class="btn-toolbar mb-2 mb-md-0">
                 <div class="btn-group mr-2">
                     <button class="btn btn-sm btn-outline-primary" @click="test">Тестировать</button>
-                    <button class="btn btn-sm btn-outline-primary" :disabled="testResults !== false"
+                    <button class="btn btn-sm btn-outline-primary" :disabled="isTested !== false"
                             @click="step">
                         Шаг
                     </button>
@@ -44,7 +44,7 @@
             <div class="col-12">
                 <div class="form-group">
                     <label for="model">Модель</label>
-                    <textarea id="model" class="form-control w-100" rows="3" v-model="model"></textarea>
+                    <textarea id="model" class="form-control w-100" rows="3" v-model="modelText"></textarea>
                 </div>
             </div>
         </div>
@@ -54,7 +54,7 @@
             <h2>Модель</h2>
             <div class="btn-toolbar mb-2 mb-md-0">
                 <div class="btn-group mr-2">
-                    <button class="btn btn-sm btn-outline-primary" :disabled="testResults !== false"
+                    <button class="btn btn-sm btn-outline-primary" :disabled="isTested !== false"
                             @click="step">
                         Шаг
                     </button>
@@ -74,7 +74,8 @@
             </div>
         </div>
 
-        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2">
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2"
+             v-if="chain.length > 1">
             <div class="markov__chain d-flex justify-content-start flex-wrap pt-2 pb-2">
                 <span v-for="state in chain">{{ state }}</span>
             </div>
@@ -86,7 +87,7 @@
                 </div>
             </div>
         </div>
-        <div class="markov__model" v-html="modelRender"></div>
+        <div class="markov__model" v-html="model"></div>
 
         <modal v-if="modalShown" :buttons="modalButtons" @close="modalClose($event)">
             <h3 slot="header" class="text-primary">{{ modalType === 'load' ? 'Загрузить' : 'Сохранить' }}</h3>
@@ -98,81 +99,87 @@
 </template>
 
 <script>
-    import Cell from "../classes/Cell";
-    import Transition from "../classes/Transition";
-    import TestResult from "../classes/TestResult";
-    import ReverseMarkovChain from "../classes/ReverseMarkovChain";
     import DataMatrix from "./DataMatrix";
     import Modal from "./Modal";
     import {configFromMatrix, renderSvg} from "../modules/drawer";
     import copy from 'clipboard-copy';
     import saveAs from 'file-saver';
+    import {createNamespacedHelpers} from "vuex";
+
+    const {mapActions, mapGetters, mapState} = createNamespacedHelpers('reverse');
 
     export default {
         name: 'ReverseMode',
+        components: {
+            matrix: DataMatrix,
+            modal: Modal,
+        },
         data() {
             return {
-                modelSize: 4,
-                model: '',
-                matrix: [],
-                stepCount: 100,
-                runCount: 10,
-                reverse: false,
                 display: 'intensity',
-                deadEnds: [],
-                testResults: false,
-                transition: false,
-                chainEnd: false,
-                chain: [0],
                 copied: false,
                 modalShown: false,
                 modalType: '',
                 modalButtons: [],
             };
         },
-        components: {
-            matrix: DataMatrix,
-            modal: Modal,
-        },
-        created() {
-            let matrix = [];
-            for (let i = 0; i < this.modelSize; i++) {
-                let row = [];
-                for (let j = 0; j < this.modelSize; j++) {
-                    row.push(new Cell());
-                }
-                matrix.push(row);
-            }
-            this.matrix = matrix;
-            this.$watch('modelSize', this.modelRebuild);
-            this.$watch('modelTransitions', this.modelRebuild);
-        },
         computed: {
-            modelTransitions() {
-                let transitions = [],
-                    stateList = this.model
-                        .split("\n")
-                        .filter(line => line.trim().length > 0)
-                        .map(line => line
-                            .trim()
-                            .split(' ')
-                            .map(state => parseInt(state.trim()))
-                            .filter(state => typeof state === 'number' && state >= 0)
-                        );
-                for (let k = 0; k < stateList.length; k++) {
-                    for (let i = 1; i < stateList[k].length; i++) {
-                        transitions.push(new Transition(stateList[k][i - 1], stateList[k][i]));
-                    }
-                }
-                return transitions;
-            }
+            ...mapState({
+                matrix: state => state.model.matrix,
+                reverse: state => state.calculator,
+                chain: state => state.chain,
+                isTested: state => state.isTested,
+            }),
+            ...mapGetters({
+                modelConfig: 'config',
+                modelTransitions: 'modelTransitions',
+            }),
+            modelSize: {
+                get() {
+                    return this.$store.state.reverse.model.size;
+                },
+                set(value) {
+                    this.$store.commit('reverse/model/resize', value);
+                    this.$store.dispatch('reverse/rebuild');
+                },
+            },
+            modelText: {
+                get() {
+                    return this.$store.state.reverse.modelText;
+                },
+                set(value) {
+                    this.$store.dispatch('reverse/changeModel', value);
+                },
+            },
+            runCount: {
+                get() {
+                    return this.$store.state.reverse.model.chains;
+                },
+                set(value) {
+                    this.$store.commit('reverse/model/setChains', value);
+                },
+            },
+            stepCount: {
+                get() {
+                    return this.$store.state.reverse.model.steps;
+                },
+                set(value) {
+                    this.$store.commit('reverse/model/setSteps', value);
+                },
+            },
+        },
+        asyncComputed: {
+            model() {
+                const config = configFromMatrix({...this.modelConfig, mode: this.display});
+                return renderSvg(config);
+            },
         },
         methods: {
-            init() {
-                if (!this.reverse) {
-                    this.reverse = new ReverseMarkovChain(this.modelSize, this.modelTransitions);
-                }
-            },
+            ...mapActions({
+                step: 'step',
+                test: 'test',
+                clear: 'clear',
+            }),
             modalSaveOpen() {
                 this.modalShown = true;
                 this.modalType = 'save';
@@ -209,24 +216,14 @@
                 let text = '';
                 switch (mode) {
                     case 'matrix':
-                        text += `N = ${this.modelSize}\r\n\r\n`;
-                        for (let i = 0; i < this.modelSize; i++) {
-                            for (let j = 0; j < this.modelSize; j++) {
-                                if (j > 0) {
-                                    text += ' ';
-                                }
-                                text += parseFloat(this.matrix[i][j].value).toFixed(3);
-                            }
-                            text += "\n";
-                        }
+                        text = this.$store.getters['reverse/model/asText'];
                         saveAs(new Blob([text], {type: "text/plain;charset=utf-8"}), 'markov-matrix.txt');
                         break;
                     case 'model':
-                        saveAs(new Blob([this.modelRender], {type: "text/plain;charset=utf-8"}), 'markov-model.svg');
+                        saveAs(new Blob([this.model], {type: "text/plain;charset=utf-8"}), 'markov-model.svg');
                         break;
                     case 'chains':
-                        text += `N = ${this.modelSize}\r\n\r\n`;
-                        text += this.model;
+                        text = `N = ${this.modelSize}\r\n\r\n${this.modelText}`;
                         saveAs(new Blob([text], {type: "text/plain;charset=utf-8"}), 'markov-chain.txt');
                         break;
                 }
@@ -241,24 +238,12 @@
                     }
                     const reader = new FileReader();
                     reader.onload = event => {
-                        const lines = event.target.result
-                            .split("\n")
-                            .map(line => line.trim());
-
-                        let [_, N] = lines[0].split('=').map(part => part.trim());
-
-                        if (N > 0) {
-                            const model = lines.slice(1)
-                                .filter(line => line.trim().length > 0)
-                                .join("\n");
-
-                            this.clear();
-                            this.clear();
-                            this.modelSize = N;
-                            this.model = model;
-                        } else {
-                            alert('Формат файла не поддерживается');
-                        }
+                        this.$store.dispatch('reverse/loadFromText', event.target.result)
+                            .then(result => {
+                                if (!result) {
+                                    alert('Формат файла не поддерживается');
+                                }
+                            });
                     };
                     reader.readAsText(file);
 
@@ -273,79 +258,6 @@
                         setTimeout(() => this.copied = false, 750);
                     });
             },
-            modelRebuild() {
-                this.reverse = new ReverseMarkovChain(this.modelSize, this.modelTransitions);
-                this.matrix = this.reverse.intensivityMatrix;
-            },
-            step() {
-                this.init();
-                this.transition = this.reverse.next();
-                if (this.transition.to === null) {
-                    this.transition = false;
-                    this.chainEnd = true;
-                    this.reverse.reset();
-                } else {
-                    if (this.chainEnd) {
-                        this.chain = [this.transition.from];
-                        this.chainEnd = false;
-                    }
-                    this.chain.push(this.transition.to);
-                }
-            },
-            test() {
-                this.transition = false;
-                this.deadEnds = [];
-                this.testResults = false;
-
-                const reverse = new ReverseMarkovChain(this.modelSize, this.modelTransitions);
-                let testResults = reverse.test(this.runCount, this.stepCount);
-                let transitions = new Array(this.modelSize),
-                    stateVisits = new Array(this.modelSize),
-                    deadEnds = [];
-                for (let i = 0; i < this.modelSize; i++) {
-                    stateVisits[i] = 0;
-                    transitions[i] = new Array(this.modelSize);
-                    for (let j = 0; j < this.modelSize; j++) {
-                        transitions[i][j] = new Cell();
-                    }
-                }
-                for (let k = 0; k < testResults.length; k++) {
-                    if (testResults[k].stepCount < this.stepCount) {
-                        deadEnds.push(testResults[k].lastPosition);
-                    }
-                    for (let i = 0; i < this.modelSize; i++) {
-                        stateVisits[i] += testResults[k].stateVisits[i];
-                        for (let j = 0; j < this.modelSize; j++) {
-                            transitions[i][j].value += testResults[k].transitions[i][j].value;
-                        }
-                    }
-                }
-                this.deadEnds = deadEnds;
-                this.testResults = new TestResult(transitions, false, this.stepCount, stateVisits);
-            },
-            clear() {
-                if (this.testResults !== false) {
-                    this.testResults = false;
-                } else {
-                    this.model = '';
-                    this.deadEnds = [];
-                }
-            },
-        },
-        asyncComputed: {
-            modelRender() {
-                let config;
-                if (!this.testResults) {
-                    config = configFromMatrix(this.matrix, this.reverse.stateVisits, this.reverse.transitionMatrix, this.transition, this.display, this.deadEnds);
-                } else {
-                    config = configFromMatrix(this.matrix, this.testResults.stateVisits, this.testResults.transitions, new Transition(-1, -1), this.display, this.deadEnds);
-                }
-                return renderSvg(config);
-            }
         },
     }
 </script>
-
-<style scoped>
-
-</style>

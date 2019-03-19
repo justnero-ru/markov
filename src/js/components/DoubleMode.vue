@@ -1,7 +1,7 @@
 <template>
     <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4">
         <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-            <h1 class="h2">Двухсторонняя Марковская цепь</h1>
+            <h1 class="h2">Восстановление Марковской модели</h1>
             <div class="btn-toolbar mb-2 mb-md-0">
                 <div class="btn-group mr-2">
                     <button class="btn btn-sm btn-outline-primary" @click="test">Тестировать</button>
@@ -15,75 +15,104 @@
 
         <h2>Настройки</h2>
         <div class="row">
-            <div class="col-4">
+            <div class="col">
                 <div class="form-group">
                     <label for="model-size">Размерность модели</label>
                     <input type="number" id="model-size" class="form-control" min="2" step="1"
                            v-model="modelSize">
                 </div>
             </div>
-            <div class="col-4">
+            <div class="col">
                 <div class="form-group">
                     <label for="step-count">Максимальное количество шагов</label>
                     <input type="number" id="step-count" class="form-control" min="1" step="1"
                            v-model="stepCount">
                 </div>
             </div>
-            <div class="col-4">
+            <div class="col">
                 <div class="form-group">
-                    <label for="iteration-count">Количество цепочек</label>
-                    <input type="number" id="iteration-count" class="form-control" min="1" step="1"
+                    <label for="run-count">Количество цепочек</label>
+                    <input type="number" id="run-count" class="form-control" min="1" step="1"
                            v-model="runCount">
+                </div>
+            </div>
+            <div class="col">
+                <div class="form-group">
+                    <label for="eps">Точность 𝜀</label>
+                    <input type="number" id="eps" class="form-control" v-model="eps">
+                </div>
+            </div>
+            <div class="col">
+                <div class="form-group">
+                    <label for="iteration-count">Количество итераций</label>
+                    <input type="number" id="iteration-count" class="form-control" v-model="iterationCount" min="1"
+                           step="1">
                 </div>
             </div>
         </div>
 
         <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2">
-            <h2>Первичная модель</h2>
+            <h2>Исходная модель</h2>
         </div>
 
         <div class="d-flex justify-content-between flex-wrap align-items-start">
-            <matrix :model-size="modelSize" :matrix="matrix" @matrix-change="matrixChange"></matrix>
+            <matrix :model-size="modelSize" :matrix="directMatrix" @matrix-change="matrixChange"
+                    :eps="epsForMatrix"></matrix>
             <div class="markov__model flex-shrink-0" v-html="modelFirst"></div>
         </div>
 
-        <div v-if="chains.length">
-            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mt-4 mb-3 border-bottom">
-                <h4>Используемые цепочки для генерации обратной модели</h4>
-                <div class="btn-toolbar mb-2 mb-md-0">
-                    <div class="btn-group mr-2">
-                        <button class="btn btn-sm btn-outline-primary" @click="chainsShowed = !chainsShowed">
-                            {{ chainsShowed ? 'Скрыть' : 'Показать' }}
-                        </button>
-                    </div>
+        <div v-if="!isTested" class="d-flex justify-content-center flex-wrap flex-md-nowrap align-items-center">
+            Проведите тестирование что бы восстановить модель
+        </div>
+
+        <div class="d-flex justify-content-end flex-wrap flex-md-nowrap align-items-center">
+            <div class="btn-toolbar mb-2 mb-md-0">
+                <div class="btn-group mr-2">
+                    <button class="btn btn-sm btn-outline-primary" @click="intermediateShowed = !intermediateShowed">
+                        {{ intermediateShowed ? 'Скрыть промежуточные модели' : 'Показать промежуточные модели' }}
+                    </button>
                 </div>
             </div>
-            <transition name="dropdown">
-                <div class="d-flex justify-content-start flex-wrap"
-                     v-if="chainsShowed">
-                    <div v-for="chain in chains">
-                        <div v-if="chain.length > 0"
-                             class="markov__chain d-flex justify-content-start flex-wrap pt-2 pb-2 mr-5">
-                            <span>{{ chain[0].from}}</span>
-                            <span v-for="transition in chain">{{ transition.to }}</span>
+        </div>
+
+        <div v-for="(matrix, index) in recoveredMatrices">
+            <template v-if="intermediateShowed || index + 1 === recoveredMatrices.length">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-1 mt-2">
+                    <h2 v-if="index + 1 < recoveredMatrices.length">Промежуточная модель {{ index + 1 }} порядка</h2>
+                    <h2 v-else>Восстановленная модель <small>(σ = {{ stdev }})</small></h2>
+                </div>
+
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center p-0 mt-0 mb-1">
+                    <h5>Цепочки, используемые для восстановления</h5>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group mr-2">
+                            <button class="btn btn-sm btn-outline-primary" @click="chainsShowed = !chainsShowed">
+                                {{ chainsShowed ? 'Скрыть' : 'Показать' }}
+                            </button>
                         </div>
                     </div>
                 </div>
-            </transition>
-        </div>
-        <div v-else class="d-flex justify-content-center flex-wrap flex-md-nowrap align-items-center">
-            Проведите тестирование что бы построить цепочки на вход второго этапа
-        </div>
+                <transition name="dropdown">
+                    <div class="d-flex justify-content-start flex-wrap mb-1"
+                         v-if="chainsShowed">
+                        <div v-for="chain in chains[index]">
+                            <div v-if="chain.length > 0"
+                                 class="markov__chain d-flex justify-content-start flex-wrap pt-2 pb-2 mr-5">
+                                <span>{{ chain[0].from }}</span>
+                                <span v-for="transition in chain">{{ transition.to }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </transition>
 
-        <div v-if="chains.length > 0">
-            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2">
-                <h2>Вторичная модель</h2>
-            </div>
-
-            <div class="d-flex justify-content-between flex-wrap align-items-start">
-                <matrix :model-size="modelSize" :matrix="matrixSecond" :compare-to="matrix" :change="false"></matrix>
-                <div class="markov__model flex-shrink-0" v-html="modelSecond"></div>
-            </div>
+                <div class="d-flex justify-content-between flex-wrap align-items-start">
+                    <matrix :model-size="modelSize" :matrix="matrix"
+                            :compare-to="directMatrix" :change="false"
+                            :eps="epsForMatrix"></matrix>
+                    <div class="markov__model flex-shrink-0"
+                         v-html="recoveredModels && recoveredModels.length > index ? recoveredModels[index] : ''"></div>
+                </div>
+            </template>
         </div>
 
         <modal v-if="modalShown" :buttons="modalButtons" @close="modalClose($event)">
@@ -96,73 +125,110 @@
 </template>
 
 <script>
-    import DirectMarkovChain from "../classes/DirectMarkovChain";
-    import ReverseMarkovChain from "../classes/ReverseMarkovChain";
     import Cell from "../classes/Cell";
-    import Transition from "../classes/Transition";
     import DataMatrix from "./DataMatrix";
     import Modal from "./Modal";
     import {configFromMatrix, renderSvg} from "../modules/drawer";
+    import {createNamespacedHelpers} from "vuex";
+
+    const {mapActions, mapGetters, mapState} = createNamespacedHelpers('double');
 
     export default {
         name: 'DoubleMode',
-        data() {
-            return {
-                modelSize: 4,
-                matrix: [],
-                matrixSecond: [],
-                direct: false,
-                runCount: 5,
-                stepCount: 10,
-                chains: false,
-                modalShown: false,
-                modalType: '',
-                modalButtons: [],
-                chainsShowed: false,
-            }
-        },
         components: {
             matrix: DataMatrix,
             modal: Modal,
         },
+        data() {
+            return {
+                chainsShowed: false,
+                intermediateShowed: false,
+                modalShown: false,
+                modalType: '',
+                modalButtons: [],
+            }
+        },
+        computed: {
+            ...mapState({
+                isTested: state => state.multi.isGenerated,
+                directMatrix: state => state.direct.model.matrix,
+                recoveredMatrices: state => state.multi.intensities,
+                chains: state => state.multi.transitions,
+            }),
+            ...mapGetters({
+                directModelConfig: 'direct/config',
+                recoveredModelConfigs: 'multi/configs',
+                stdev: 'stdev',
+            }),
+            eps: {
+                get() {
+                    return this.$store.state.double.eps;
+                },
+                set(value) {
+                    this.$store.commit('double/setEps', value);
+                },
+            },
+            iterationCount: {
+                get() {
+                    return this.$store.state.double.multi.iterationCount;
+                },
+                set(value) {
+                    this.$store.commit('double/multi/setIterationCount', value);
+                },
+            },
+            modelSize: {
+                get() {
+                    return this.$store.state.double.direct.model.size;
+                },
+                set(value) {
+                    this.$store.commit('double/direct/model/resize', value);
+                    this.$store.dispatch('double/resetReverse');
+                },
+            },
+            runCount: {
+                get() {
+                    return this.$store.state.double.direct.model.chains;
+                },
+                set(value) {
+                    this.$store.commit('double/direct/model/setChains', value);
+                },
+            },
+            stepCount: {
+                get() {
+                    return this.$store.state.double.direct.model.steps;
+                },
+                set(value) {
+                    this.$store.commit('double/direct/model/setSteps', value);
+                },
+            },
+            epsForMatrix() {
+                if (isNaN(parseFloat(this.eps)) || parseFloat(this.eps) === 0) {
+                    return true;
+                }
+                return parseFloat(this.eps);
+            },
+        },
         asyncComputed: {
             modelFirst() {
-                let config = configFromMatrix(this.matrix, [], [], new Transition(-1, -1), 'intensity');
+                const config = configFromMatrix({...this.directModelConfig, mode: 'intensity'});
                 return renderSvg(config);
             },
-            modelSecond() {
-                let config = configFromMatrix(this.matrixSecond, [], [], new Transition(-1, -1), 'intensity');
-                return renderSvg(config);
-            }
-        },
-        created() {
-            let matrix = [];
-            for (let i = 0; i < this.modelSize; i++) {
-                let row = [];
-                for (let j = 0; j < this.modelSize; j++) {
-                    row.push(new Cell());
+            recoveredModels() {
+                const renders = [];
+                for (let i = 0; i < this.recoveredModelConfigs.length; i++) {
+                    const config = configFromMatrix({...this.recoveredModelConfigs[i], mode: 'intensity'});
+                    renders.push(renderSvg(config));
                 }
-                matrix.push(row);
+                return Promise.all(renders);
             }
-            this.matrix = matrix;
-            this.$watch('modelSize', this.matrixResize);
         },
         methods: {
-            init() {
-                if (!this.direct) {
-                    this.direct = new DirectMarkovChain(JSON.parse(JSON.stringify(this.matrix)));
-                }
-            },
-            test() {
-                const direct = new DirectMarkovChain(JSON.parse(JSON.stringify(this.matrix)));
-                let testResults = direct.test(this.runCount, this.stepCount),
-                    chains = [];
-                for (let k = 0; k < testResults.length; k++) {
-                    chains.push(testResults[k].chain);
-                }
-                this.chains = chains;
-                this.generateSecondStep();
-            },
+            ...mapActions({
+                normalize: 'direct/model/normalize',
+                matrixClear: 'clear',
+                matrixChange: 'direct/matrixChange',
+                test: 'test',
+            }),
             modalSaveOpen() {
                 this.modalShown = true;
                 this.modalType = 'save';
@@ -304,64 +370,6 @@
                 }
                 alert('Формат файла не поддерживается');
             },
-            generateSecondStep() {
-                let reverse = new ReverseMarkovChain(this.modelSize, this.chains.flat());
-                this.matrixSecond = reverse.intensivityMatrix;
-            },
-            matrixResize(newSize) {
-                let newMatrix = this.matrix;
-                const oldSize = this.matrix.length;
-                if (newSize > oldSize) {
-                    for (let i = 0; i < oldSize; i++) {
-                        for (let j = oldSize; j < newSize; j++) {
-                            newMatrix[i].push(new Cell());
-                        }
-                    }
-                    for (let i = oldSize; i < newSize; i++) {
-                        let row = [];
-                        for (let j = 0; j < newSize; j++) {
-                            row.push(new Cell());
-                        }
-                        newMatrix.push(row);
-                    }
-                } else if (newSize < oldSize) {
-                    for (let i = 0; i < newSize; i++) {
-                        newMatrix[i] = newMatrix[i].slice(0, newSize);
-                    }
-                    newMatrix = newMatrix.slice(0, newSize);
-                }
-                this.matrix = newMatrix;
-                this.chains = [];
-            },
-            matrixChange(i, j, value) {
-                this.matrix[i][j].value = value;
-                this.direct = new DirectMarkovChain(JSON.parse(JSON.stringify(this.matrix)));
-                this.chains = [];
-            },
-            normalize() {
-                let normalized = DirectMarkovChain.normalize(JSON.parse(JSON.stringify(this.matrix)));
-                for (let i = 0; i < this.modelSize; i++) {
-                    for (let j = 0; j < this.modelSize; j++) {
-                        this.matrix[i][j].value = normalized[i][j].value;
-                    }
-                }
-            },
-            matrixClear() {
-                if (this.chains.length) {
-                    this.chains = [];
-                } else {
-                    for (let i = 0; i < this.modelSize; i++) {
-                        for (let j = 0; j < this.modelSize; j++) {
-                            this.matrix[i][j].clear();
-                        }
-                    }
-                    this.direct && this.direct.reset();
-                }
-            }
-        }
+        },
     }
 </script>
-
-<style scoped>
-
-</style>

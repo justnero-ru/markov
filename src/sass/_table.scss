@@ -20,6 +20,24 @@
         &:first-child {
             border-right-width: 2px;
         }
+
+        &.mode {
+            cursor: pointer;
+            user-select: none;
+            background-color: $light;
+            &:hover {
+                background-color: $gray-200;
+            }
+            &:active {
+                box-shadow: inset 1px 1px 0 0 #ccc;
+            }
+            &.data {
+                color: $blue;
+            }
+            &.eps {
+                color: $red;
+            }
+        }
     }
 
     tbody {

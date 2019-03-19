@@ -6,7 +6,7 @@ import {Module, render} from 'viz.js/full.render.js';
 
 let viz = new Viz({Module, render});
 
-export function configFromMatrix(matrix, stateVisits, transitions, transition, mode, deadEnds) {
+export function configFromMatrix({matrix, stateVisits, transitions, transition, mode, deadEnds}) {
     const size = matrix.length,
         format = 'S%d',
         formatLabel = format.replace('%d', '<sub><font point-size="10">%d</font></sub>');

@@ -1,20 +1,19 @@
 import Vue from 'vue';
-
+import VueRouter from 'vue-router';
 import AsyncComputed from 'vue-async-computed';
-import DirectMode from "./components/DirectMode";
-import ReverseMode from "./components/ReverseMode";
-import DoubleMode from "./components/DoubleMode";
+import store from './store';
+import router from './router';
+import App from './components/App';
 
+Vue.use(VueRouter);
 Vue.use(AsyncComputed);
 
 window.app = new Vue({
     el: '#app',
+    store,
+    router,
     data: {
         currentMode: 'direct'
     },
-    components: {
-        direct: DirectMode,
-        reverse: ReverseMode,
-        double: DoubleMode,
-    }
+    render: h => h(App),
 });

@@ -5,10 +5,10 @@
             <div class="btn-toolbar mb-2 mb-md-0">
                 <div class="btn-group mr-2">
                     <button class="btn btn-sm btn-outline-primary" @click="test">Тестировать</button>
-                    <button class="btn btn-sm btn-outline-primary" :disabled="testResults !== false"
+                    <button class="btn btn-sm btn-outline-primary" :disabled="isTested !== false"
                             @click="step">Шаг
                     </button>
-                    <button class="btn btn-sm btn-outline-secondary" :disabled="testResults !== false"
+                    <button class="btn btn-sm btn-outline-secondary" :disabled="isTested !== false"
                             @click="normalize">Нормализовать
                     </button>
                     <button class="btn btn-sm btn-outline-secondary" @click="modalSaveOpen">Сохранить</button>
@@ -42,13 +42,13 @@
                 </div>
             </div>
         </div>
-        <matrix :model-size="modelSize" :matrix="matrix" @matrix-change="matrixChange"></matrix>
+        <matrix :model-size="modelSize" :matrix="matrix" :change="true" @matrix-change="matrixChange"></matrix>
 
         <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2">
             <h2>Модель</h2>
             <div class="btn-toolbar mb-2 mb-md-0">
                 <div class="btn-group mr-2">
-                    <button class="btn btn-sm btn-outline-primary" :disabled="testResults !== false"
+                    <button class="btn btn-sm btn-outline-primary" :disabled="isTested !== false"
                             @click="step">Шаг
                     </button>
                     <button :class="['btn', 'btn-sm', 'btn-outline-secondary', {'active': display === 'intensity'}]"
@@ -66,19 +66,22 @@
             </div>
         </div>
 
-        <h4 class="mt-4 mb-0">Текущая цепочка</h4>
-        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-1 pb-3">
-            <div class="markov__chain d-flex justify-content-start flex-wrap pt-2 pb-2">
-                <span v-for="state in chain">{{ state }}</span>
-            </div>
-            <div class="btn-toolbar mb-2 mb-md-0">
-                <div class="btn-group mr-2">
-                    <button :class="['btn', 'btn-sm', {'btn-outline-secondary': !copied, 'btn-outline-success': copied}]"
-                            @click="copyChain"><i class="fa fa-copy"></i>
-                    </button>
+        <template v-if="chain.length > 0">
+            <h4 class="mt-4 mb-0">Текущая цепочка</h4>
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-1 pb-3">
+                <div class="markov__chain d-flex justify-content-start flex-wrap pt-2 pb-2">
+                    <span v-for="state in chain">{{ state }}</span>
+                </div>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group mr-2">
+                        <button :class="['btn', 'btn-sm', {'btn-outline-secondary': !copied, 'btn-outline-success': copied}]"
+                                @click="copyChain"><i class="fa fa-copy"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
+        </template>
+
         <div class="markov__model" v-html="model"></div>
 
         <modal v-if="modalShown" :buttons="modalButtons" @close="modalClose($event)">
@@ -91,71 +94,83 @@
 </template>
 
 <script>
-    import DirectMarkovChain from "../classes/DirectMarkovChain";
-    import Cell from "../classes/Cell";
-    import TestResult from "../classes/TestResult";
-    import Transition from "../classes/Transition";
     import DataMatrix from "./DataMatrix";
     import Modal from "./Modal";
     import {configFromMatrix, renderSvg} from "../modules/drawer";
     import copy from 'clipboard-copy';
     import saveAs from 'file-saver';
+    import {createNamespacedHelpers} from "vuex";
+
+    const  {mapActions, mapGetters, mapState} = createNamespacedHelpers('direct');
 
     export default {
         name: 'DirectMode',
+        components: {
+            matrix: DataMatrix,
+            modal: Modal,
+        },
         data() {
             return {
-                modelSize: 4,
-                matrix: [],
-                direct: false,
-                transition: false,
                 display: 'intensity',
-                runCount: 10,
-                stepCount: 100,
-                deadEnds: [],
-                testResults: false,
-                chains: false,
-                chainEnd: false,
-                chain: [0],
                 copied: false,
                 modalShown: false,
                 modalType: '',
                 modalButtons: [],
             }
         },
-        components: {
-            matrix: DataMatrix,
-            modal: Modal,
+        computed: {
+            ...mapState({
+                matrix: state => state.model.matrix,
+                transition: state => state.transition,
+                deadEnds: state => state.deadEnds,
+                isTested: state => state.isTested,
+                chain: state => state.chain,
+                chains: state => state.chains,
+                chainEnd: state => state.isChainEnded,
+                direct: state => state.calculator,
+            }),
+            ...mapGetters({
+                modelConfig: 'config',
+            }),
+            modelSize: {
+                get() {
+                    return this.$store.state.direct.model.size;
+                },
+                set(value) {
+                    this.$store.commit('direct/model/resize', value);
+                },
+            },
+            runCount: {
+                get() {
+                    return this.$store.state.direct.model.chains;
+                },
+                set(value) {
+                    this.$store.commit('direct/model/setChains', value);
+                },
+            },
+            stepCount: {
+                get() {
+                    return this.$store.state.direct.model.steps;
+                },
+                set(value) {
+                    this.$store.commit('direct/model/setSteps', value);
+                },
+            },
         },
         asyncComputed: {
             model() {
-                let config;
-                if (!this.testResults) {
-                    config = configFromMatrix(this.matrix, this.direct.stateVisits, this.direct.transitionMatrix, this.transition, this.display, this.deadEnds);
-                } else {
-                    config = configFromMatrix(this.matrix, this.testResults.stateVisits, this.testResults.transitions, new Transition(-1, -1), this.display, this.deadEnds);
-                }
+                const config = configFromMatrix({...this.modelConfig, mode: this.display});
                 return renderSvg(config);
-            }
-        },
-        created() {
-            let matrix = [];
-            for (let i = 0; i < this.modelSize; i++) {
-                let row = [];
-                for (let j = 0; j < this.modelSize; j++) {
-                    row.push(new Cell());
-                }
-                matrix.push(row);
-            }
-            this.matrix = matrix;
-            this.$watch('modelSize', this.matrixResize);
+            },
         },
         methods: {
-            init() {
-                if (!this.direct) {
-                    this.direct = new DirectMarkovChain(JSON.parse(JSON.stringify(this.matrix)));
-                }
-            },
+            ...mapActions({
+                normalize: 'model/normalize',
+                matrixClear: 'clear',
+                matrixChange: 'matrixChange',
+                step: 'step',
+                test: 'test',
+            }),
             copyChain() {
                 copy(this.chain.join(' '))
                     .then(() => {
@@ -199,41 +214,14 @@
                 let text = '';
                 switch (mode) {
                     case 'matrix':
-                        text += `N = ${this.modelSize}\r\n\r\n`;
-                        for (let i = 0; i < this.modelSize; i++) {
-                            for (let j = 0; j < this.modelSize; j++) {
-                                if (j > 0) {
-                                    text += ' ';
-                                }
-                                text += parseFloat(this.matrix[i][j].value).toFixed(3);
-                            }
-                            text += "\r\n";
-                        }
+                        text = this.$store.getters['direct/model/asText'];
                         saveAs(new Blob([text], {type: "text/plain;charset=utf-8"}), 'markov-input.txt');
                         break;
                     case 'model':
                         saveAs(new Blob([this.model], {type: "text/plain;charset=utf-8"}), 'markov-model.svg');
                         break;
                     case 'chains':
-                        text += `N = ${this.modelSize}\r\n\r\n`;
-                        if (this.chains === false) {
-                            for (let i = 0; i < this.chain.length; i++) {
-                                if (i > 0) {
-                                    text += ' ';
-                                }
-                                text += this.chain[i];
-                            }
-                            text += "\r\n";
-                        } else {
-                            for (let k = 0; k < this.chains.length; k++) {
-                                let chain = this.chains[k];
-                                text += chain[0].from;
-                                for (let i = 0; i < chain.length; i++) {
-                                    text += ` ${chain[i].to}`;
-                                }
-                                text += "\r\n";
-                            }
-                        }
+                        text = this.$store.getters['direct/chainsAsText'];
                         saveAs(new Blob([text], {type: "text/plain;charset=utf-8"}), 'markov-chain.txt');
                         break;
                 }
@@ -248,38 +236,18 @@
                     }
                     const reader = new FileReader();
                     reader.onload = event => {
-                        const lines = event.target.result
-                            .split("\n")
-                            .map(line => line.trim());
-
-                        let [_, N] = lines[0].split('=').map(part => part.trim());
-
-                        if (N > 0) {
-                            const matrix = lines.slice(1)
-                                .filter(line => line.trim().length > 0)
-                                .map(line =>
-                                    line.split(' ')
-                                        .map(element =>
-                                            parseFloat(element.trim())
-                                        )
-                                );
-
-                            this.matrixClear();
-                            this.matrixClear();
-                            this.modelSize = N;
-
-                            let newMatrix = [];
-                            for (let line of matrix) {
-                                let row = [];
-                                for (let element of line) {
-                                    row.push(new Cell(element));
-                                }
-                                newMatrix.push(row);
-                            }
-                            this.matrix = newMatrix;
+                        let promise;
+                        if (this.$store.state.direct.isTested) {
+                            promise = this.$store.dispatch('direct/clear')
+                                .then(() => this.$store.dispatch('direct/clear'));
                         } else {
-                            alert('Формат файла не поддерживается');
+                            promise = this.$store.dispatch('direct/clear');
                         }
+                        promise.then(() => {
+                            if (!this.$store.commit('direct/model/loadFromText', event.target.result)) {
+                                alert('Формат файла не поддерживается');
+                            }
+                        });
                     };
                     reader.readAsText(file);
 
@@ -287,110 +255,6 @@
                 }
                 alert('Формат файла не поддерживается');
             },
-            test() {
-                this.transition = false;
-                this.deadEnds = [];
-                this.testResults = false;
-                this.chains = [];
-
-                const direct = new DirectMarkovChain(JSON.parse(JSON.stringify(this.matrix)));
-                let testResults = direct.test(this.runCount, this.stepCount);
-                let transitions = new Array(this.modelSize),
-                    stateVisits = new Array(this.modelSize),
-                    deadEnds = [];
-                for (let i = 0; i < this.modelSize; i++) {
-                    stateVisits[i] = 0;
-                    transitions[i] = new Array(this.modelSize);
-                    for (let j = 0; j < this.modelSize; j++) {
-                        transitions[i][j] = new Cell();
-                    }
-                }
-                for (let k = 0; k < testResults.length; k++) {
-                    this.chains.push(testResults[k].chain);
-                    if (testResults[k].stepCount < this.stepCount) {
-                        deadEnds.push(testResults[k].lastPosition);
-                    }
-                    for (let i = 0; i < this.modelSize; i++) {
-                        stateVisits[i] += testResults[k].stateVisits[i];
-                        for (let j = 0; j < this.modelSize; j++) {
-                            transitions[i][j].value += testResults[k].transitions[i][j].value;
-                        }
-                    }
-                }
-                this.deadEnds = deadEnds;
-                this.testResults = new TestResult(transitions, false, this.stepCount, stateVisits);
-            },
-            step() {
-                this.init();
-                this.transition = this.direct.next();
-                if (this.transition.to === null) {
-                    this.transition = false;
-                    this.chainEnd = true;
-                    this.direct.reset();
-                } else {
-                    if (this.chainEnd) {
-                        this.chain = [this.transition.from];
-                        this.chainEnd = false;
-                    }
-                    this.chain.push(this.transition.to);
-                }
-            },
-            matrixResize(newSize) {
-                let newMatrix = this.matrix;
-                const oldSize = this.matrix.length;
-                if (newSize > oldSize) {
-                    for (let i = 0; i < oldSize; i++) {
-                        for (let j = oldSize; j < newSize; j++) {
-                            newMatrix[i].push(new Cell());
-                        }
-                    }
-                    for (let i = oldSize; i < newSize; i++) {
-                        let row = [];
-                        for (let j = 0; j < newSize; j++) {
-                            row.push(new Cell());
-                        }
-                        newMatrix.push(row);
-                    }
-                } else if (newSize < oldSize) {
-                    for (let i = 0; i < newSize; i++) {
-                        newMatrix[i] = newMatrix[i].slice(0, newSize);
-                    }
-                    newMatrix = newMatrix.slice(0, newSize);
-                }
-                this.matrix = newMatrix;
-            },
-            matrixChange(i, j, value) {
-                this.matrix[i][j].value = value;
-                this.direct = new DirectMarkovChain(JSON.parse(JSON.stringify(this.matrix)));
-                this.transition = false;
-                this.deadEnds = [];
-            },
-            normalize() {
-                let normalized = DirectMarkovChain.normalize(JSON.parse(JSON.stringify(this.matrix)));
-                for (let i = 0; i < this.modelSize; i++) {
-                    for (let j = 0; j < this.modelSize; j++) {
-                        this.matrix[i][j].value = normalized[i][j].value;
-                    }
-                }
-            },
-            matrixClear() {
-                if (this.testResults !== false) {
-                    this.testResults = false;
-                    this.chains = false;
-                } else {
-                    for (let i = 0; i < this.modelSize; i++) {
-                        for (let j = 0; j < this.modelSize; j++) {
-                            this.matrix[i][j].clear();
-                        }
-                    }
-                    this.direct && this.direct.reset();
-                    this.deadEnds = [];
-                }
-            }
-        }
+        },
     }
 </script>
-
-<style scoped>
-
-</style>

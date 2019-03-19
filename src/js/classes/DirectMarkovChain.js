@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import Transition from './Transition';
 import TestResult from './TestResult';
 import Cell from "./Cell";
@@ -16,25 +17,27 @@ export default class DirectMarkovChain {
     }
 
     static normalize(matrix) {
-        const size = matrix.length;
+        const normalized = _.cloneDeep(matrix),
+            size = normalized.length;
         for (let i = 0; i < size; i++) {
-            const sum = matrix[i].reduce((sum, cell) => sum + parseFloat(cell.value), 0);
+            const sum = normalized[i].reduce((sum, cell) => sum + parseFloat(cell.value), 0);
             if (sum) {
                 for (let j = 0; j < size; j++) {
-                    matrix[i][j].value = (matrix[i][j].value / sum).toFixed(3);
+                    normalized[i][j].value = (normalized[i][j].value / sum).toFixed(3);
                 }
             }
         }
-        return matrix;
+        return normalized;
     }
 
     initTransitionMatrix() {
-        this.transitionMatrix = new Array(this.size);
+        this.transitionMatrix = [];
         for (let i = 0; i < this.size; i++) {
-            this.transitionMatrix[i] = new Array(this.size);
+            const row = [];
             for (let j = 0; j < this.size; j++) {
-                this.transitionMatrix[i][j] = new Cell();
+                row.push(new Cell());
             }
+            this.transitionMatrix.push(row);
         }
     }
 
