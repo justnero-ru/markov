@@ -7,6 +7,7 @@ import {Module, render} from 'viz.js/full.render.js';
 let viz = new Viz({Module, render});
 
 export function configFromMatrix({matrix, stateVisits, transitions, transition, mode, deadEnds}) {
+    // noinspection HtmlUnknownAttribute
     const size = matrix.length,
         format = 'S%d',
         formatLabel = format.replace('%d', '<sub><font point-size="10">%d</font></sub>');
@@ -55,6 +56,9 @@ export function configFromMatrix({matrix, stateVisits, transitions, transition, 
         if (mode === 'frequencyState') {
             nodeStyles.push('shape=box');
             nodeStyles.push(sprintf('label=<' + formatLabel + '<br/><br/>%s>', nodeId, (stateVisits ? parseFloat(stateVisits[nodeId]) / sum : 0).toFixed(3)));
+        } if(mode === 'entryCount') {
+            nodeStyles.push('shape=box');
+            nodeStyles.push(sprintf('label=<' + formatLabel + '<br/><br/>%s>', nodeId, (stateVisits ? stateVisits[nodeId] : 0)));
         } else {
             nodeStyles.push(sprintf('label=<' + formatLabel + '>', nodeId));
         }

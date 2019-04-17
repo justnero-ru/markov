@@ -15,7 +15,7 @@ const getters = {
         for (let i = 0; i < state.intensities.length; i++) {
             configs.push({
                 matrix: cloneDeep(state.intensities[i]),
-                stateVisits: [],
+                stateVisits: cloneDeep(state.stateVisits[i]),
                 transitions: [],
                 transition: false,
                 deadEnds: [],
@@ -42,10 +42,11 @@ const mutations = {
     setIterationCount(state, value) {
         state.iterationCount = value;
     },
-    setResults(state, {intensities, transitions}) {
+    setResults(state, {intensities, transitions, stateVisits}) {
         state.isGenerated = true;
         state.intensities = cloneDeep(intensities);
         state.transitions = cloneDeep(transitions);
+        state.stateVisits = cloneDeep(stateVisits);
     },
     clear(state) {
         state.isGenerated = false;

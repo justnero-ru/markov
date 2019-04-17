@@ -6,6 +6,7 @@ export default class MultiReverseMarkovChain {
         this.size = size;
         this.iterationsCount = iterationsCount;
         this.intensities = [];
+        this.stateVisits = [];
         this.transitions = [transitions];
         this.generatedIterations = 0;
     }
@@ -17,7 +18,8 @@ export default class MultiReverseMarkovChain {
 
         return {
             intensities: this.intensities,
-            transitions: this.transitions
+            transitions: this.transitions,
+            stateVisits: this.stateVisits,
         };
     }
 
@@ -30,27 +32,40 @@ export default class MultiReverseMarkovChain {
         }
 
         this.intensities.push(this.normalize(matrix));
-        this.transitions.push(this.test(steps, chains));
+
+        const {transitions: testedTransitions, stateVisits} = this.test(steps, chains);
+        this.transitions.push(testedTransitions);
+        this.stateVisits.push(stateVisits);
     }
 
     test(steps, chains) {
         const transitions = [];
+        const stateVisits = [];
+
+        for (let i = 0; i < this.size; i++) {
+            stateVisits[i] = 0;
+        }
 
         for (let i = 0; i < chains; i++) {
             let current = 0,
                 transitionsRun = [];
+            stateVisits[current]++;
             for (let j = 0; j < steps; j++) {
                 let transition = this.next(current);
                 if (transition.to === null) {
                     break;
                 }
                 current = transition.to;
+                stateVisits[current]++;
                 transitionsRun.push(transition);
             }
             transitions.push(transitionsRun);
         }
 
-        return transitions;
+        return {
+            transitions,
+            stateVisits,
+        };
     }
 
     next(from) {

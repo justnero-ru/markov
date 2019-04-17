@@ -216,7 +216,7 @@
             recoveredModels() {
                 const renders = [];
                 for (let i = 0; i < this.recoveredModelConfigs.length; i++) {
-                    const config = configFromMatrix({...this.recoveredModelConfigs[i], mode: 'intensity'});
+                    const config = configFromMatrix({...this.recoveredModelConfigs[i], mode: 'entryCount'});
                     renders.push(renderSvg(config));
                 }
                 return Promise.all(renders);
