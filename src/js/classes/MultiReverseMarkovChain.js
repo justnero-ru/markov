@@ -1,5 +1,6 @@
-import Cell from "./Cell";
-import Transition from "./Transition";
+import Cell from './Cell';
+import Transition from './Transition';
+import * as PD from 'probability-distributions';
 
 export default class MultiReverseMarkovChain {
     constructor(size, iterationsCount, transitions) {
@@ -121,9 +122,17 @@ export default class MultiReverseMarkovChain {
     }
 
     consumeTime() {
-        const {distribution, min, max} = this.distributionConfig;
+        const {distribution, A, B} = this.distributionConfig;
 
-        return parseFloat(Math.random() * Math.abs(max - min) + min);
+        switch(distribution) {
+            case 'normal':
+                return PD.rnorm(1, A, B)[0];
+            case 'log-normal':
+                return PD.rlnorm(1, A, B)[0];
+            case 'uniform':
+            default:
+                return PD.runif(1, A, B)[0];
+        }
     }
 
     static createMatrix(size) {

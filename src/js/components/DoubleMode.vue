@@ -57,19 +57,20 @@
                     <select id="distribution" class="form-control" v-model="distribution">
                         <option value="uniform">Равномерное</option>
                         <option value="normal">Нормальное</option>
+                        <option value="log-normal">Лог нормальное</option>
                     </select>
                 </div>
             </div>
             <div class="col">
                 <div class="form-group">
-                    <label for="tMin">Минимальное время пребывания <i>t<sub>min</sub></i></label>
-                    <input type="number" id="tMin" class="form-control" min="0" v-model="distributionMin">
+                    <label for="distributionA" v-html="distributionALabel"></label>
+                    <input type="number" id="distributionA" class="form-control" min="0" v-model="distributionA">
                 </div>
             </div>
             <div class="col">
                 <div class="form-group">
-                    <label for="tMax">Максимальое время пребывания <i>t<sub>max</sub></i></label>
-                    <input type="number" id="tMax" class="form-control" min="0" v-model="distributionMax">
+                    <label for="distributionB" v-html="distributionBLabel"></label>
+                    <input type="number" id="distributionB" class="form-control" min="0" v-model="distributionB">
                 </div>
             </div>
         </div>
@@ -234,21 +235,41 @@
                     this.$store.commit('double/setDistribution', value);
                 },
             },
-            distributionMin: {
+            distributionA: {
                 get() {
-                    return this.$store.state.double.distributionMin;
+                    return this.$store.state.double.distributionA;
                 },
                 set(value) {
-                    this.$store.commit('double/setDistributionMin', value);
+                    this.$store.commit('double/setDistributionA', value);
                 },
             },
-            distributionMax: {
+            distributionB: {
                 get() {
-                    return this.$store.state.double.distributionMax;
+                    return this.$store.state.double.distributionB;
                 },
                 set(value) {
-                    this.$store.commit('double/setDistributionMax', value);
+                    this.$store.commit('double/setDistributionB', value);
                 },
+            },
+            distributionALabel() {
+                switch(this.distribution) {
+                    case 'normal':
+                    case 'log-normal':
+                        return 'Среднее <i>mean</i>';
+                    case 'uniform':
+                    default:
+                        return 'Минимальное время пребывания <i>t<sub>min</sub></i>';
+                }
+            },
+            distributionBLabel() {
+                switch(this.distribution) {
+                    case 'normal':
+                    case 'log-normal':
+                        return 'Стандартное отклонение <i>stdev</i>';
+                    case 'uniform':
+                    default:
+                        return 'Максимальное время пребывания <i>t<sub>max</sub></i>';
+                }
             },
             epsForMatrix() {
                 if (isNaN(parseFloat(this.eps)) || parseFloat(this.eps) === 0) {

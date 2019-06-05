@@ -4,8 +4,8 @@ import multi from './multi-reverse';
 const state = {
     eps: 0,
     distribution: 'uniform',
-    distributionMin: 0,
-    distributionMax: 1,
+    distributionA: 0,
+    distributionB: 1,
 };
 
 // getters
@@ -42,8 +42,8 @@ const actions = {
         const {size, steps, chains} = state.direct.model;
         const distributionConfig = {
             distribution: state.distribution,
-            min: state.distributionMin,
-            max: state.distributionMax,
+            A: state.distributionA,
+            B: state.distributionB,
         };
         return dispatch('direct/test')
             .then(() => {
@@ -72,11 +72,11 @@ const mutations = {
     setDistribution(state, value) {
         state.distribution = value;
     },
-    setDistributionMin(state, value) {
-        state.distributionMin = value;
+    setDistributionA(state, value) {
+        state.distributionA = parseFloat(value);
     },
-    setDistributionMax(state, value) {
-        state.distributionMax = value;
+    setDistributionB(state, value) {
+        state.distributionB = parseFloat(value);
     },
 };
 
