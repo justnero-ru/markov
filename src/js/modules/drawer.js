@@ -6,7 +6,7 @@ import {Module, render} from 'viz.js/full.render.js';
 
 let viz = new Viz({Module, render});
 
-export function configFromMatrix({matrix, stateVisits, transitions, transition, mode, deadEnds}) {
+export function configFromMatrix({matrix, stateVisits, stateTimes, transitions, transition, mode, deadEnds}) {
     // noinspection HtmlUnknownAttribute
     const size = matrix.length,
         format = 'S%d',
@@ -57,8 +57,15 @@ export function configFromMatrix({matrix, stateVisits, transitions, transition, 
             nodeStyles.push('shape=box');
             nodeStyles.push(sprintf('label=<' + formatLabel + '<br/><br/>%s>', nodeId, (stateVisits ? parseFloat(stateVisits[nodeId]) / sum : 0).toFixed(3)));
         } if(mode === 'entryCount') {
+            const stateVisit = stateVisits ? stateVisits[nodeId] : 0;
+            const stateTime = stateTimes ? stateTimes[nodeId] : 0;
+            let label = `${stateVisit}`;
+            if(!isNaN(stateTime)) {
+                label += ` (${stateTime.toFixed(1)})`;
+            }
+
             nodeStyles.push('shape=box');
-            nodeStyles.push(sprintf('label=<' + formatLabel + '<br/><br/>%s>', nodeId, (stateVisits ? stateVisits[nodeId] : 0)));
+            nodeStyles.push(sprintf('label=<' + formatLabel + '<br/><br/>%s>', nodeId, label));
         } else {
             nodeStyles.push(sprintf('label=<' + formatLabel + '>', nodeId));
         }

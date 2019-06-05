@@ -7,11 +7,18 @@ export default class MultiReverseMarkovChain {
         this.iterationsCount = iterationsCount;
         this.intensities = [];
         this.stateVisits = [];
+        this.stateTimes = [];
         this.transitions = [transitions];
         this.generatedIterations = 0;
+        this.distributionConfig = {
+            distribution: 'uniform',
+            min: 0,
+            max: 1,
+        };
     }
 
-    generate(steps, chains) {
+    generate(steps, chains, distributionConfig) {
+        this.distributionConfig = distributionConfig || this.distributionConfig;
         for (; this.generatedIterations < this.iterationsCount; this.generatedIterations++) {
             this.iteration(steps, chains);
         }
@@ -20,6 +27,7 @@ export default class MultiReverseMarkovChain {
             intensities: this.intensities,
             transitions: this.transitions,
             stateVisits: this.stateVisits,
+            stateTimes: this.stateTimes,
         };
     }
 
@@ -33,23 +41,27 @@ export default class MultiReverseMarkovChain {
 
         this.intensities.push(this.normalize(matrix));
 
-        const {transitions: testedTransitions, stateVisits} = this.test(steps, chains);
+        const {transitions: testedTransitions, stateVisits, stateTimes} = this.test(steps, chains);
         this.transitions.push(testedTransitions);
         this.stateVisits.push(stateVisits);
+        this.stateTimes.push(stateTimes);
     }
 
     test(steps, chains) {
         const transitions = [];
         const stateVisits = [];
+        const stateTimes = [];
 
         for (let i = 0; i < this.size; i++) {
             stateVisits[i] = 0;
+            stateTimes[i] = 0;
         }
 
         for (let i = 0; i < chains; i++) {
             let current = 0,
                 transitionsRun = [];
             stateVisits[current]++;
+            stateTimes[current] += this.consumeTime();
             for (let j = 0; j < steps; j++) {
                 let transition = this.next(current);
                 if (transition.to === null) {
@@ -57,6 +69,7 @@ export default class MultiReverseMarkovChain {
                 }
                 current = transition.to;
                 stateVisits[current]++;
+                stateTimes[current] += this.consumeTime();
                 transitionsRun.push(transition);
             }
             transitions.push(transitionsRun);
@@ -65,6 +78,7 @@ export default class MultiReverseMarkovChain {
         return {
             transitions,
             stateVisits,
+            stateTimes,
         };
     }
 
@@ -104,6 +118,12 @@ export default class MultiReverseMarkovChain {
         }
 
         return matrix;
+    }
+
+    consumeTime() {
+        const {distribution, min, max} = this.distributionConfig;
+
+        return parseFloat(Math.random() * Math.abs(max - min) + min);
     }
 
     static createMatrix(size) {

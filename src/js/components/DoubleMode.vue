@@ -38,15 +38,38 @@
             </div>
             <div class="col">
                 <div class="form-group">
+                    <label for="iteration-count">Количество итераций</label>
+                    <input type="number" id="iteration-count" class="form-control" v-model="iterationCount" min="1"
+                           step="1">
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <div class="form-group">
                     <label for="eps">Точность 𝜀</label>
                     <input type="number" id="eps" class="form-control" v-model="eps">
                 </div>
             </div>
             <div class="col">
                 <div class="form-group">
-                    <label for="iteration-count">Количество итераций</label>
-                    <input type="number" id="iteration-count" class="form-control" v-model="iterationCount" min="1"
-                           step="1">
+                    <label for="distribution">Вид распределения</label>
+                    <select id="distribution" class="form-control" v-model="distribution">
+                        <option value="uniform">Равномерное</option>
+                        <option value="normal">Нормальное</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col">
+                <div class="form-group">
+                    <label for="tMin">Минимальное время пребывания <i>t<sub>min</sub></i></label>
+                    <input type="number" id="tMin" class="form-control" min="0" v-model="distributionMin">
+                </div>
+            </div>
+            <div class="col">
+                <div class="form-group">
+                    <label for="tMax">Максимальое время пребывания <i>t<sub>max</sub></i></label>
+                    <input type="number" id="tMax" class="form-control" min="0" v-model="distributionMax">
                 </div>
             </div>
         </div>
@@ -79,7 +102,9 @@
             <template v-if="intermediateShowed || index + 1 === recoveredMatrices.length">
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-1 mt-2">
                     <h2 v-if="index + 1 < recoveredMatrices.length">Промежуточная модель {{ index + 1 }} порядка</h2>
-                    <h2 v-else>Восстановленная модель <small>(σ = {{ stdev }})</small></h2>
+                    <h2 v-else>Восстановленная модель
+                        <small>(σ = {{ stdev }})</small>
+                    </h2>
                 </div>
 
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center p-0 mt-0 mb-1">
@@ -201,6 +226,30 @@
                     this.$store.commit('double/direct/model/setSteps', value);
                 },
             },
+            distribution: {
+                get() {
+                    return this.$store.state.double.distribution;
+                },
+                set(value) {
+                    this.$store.commit('double/setDistribution', value);
+                },
+            },
+            distributionMin: {
+                get() {
+                    return this.$store.state.double.distributionMin;
+                },
+                set(value) {
+                    this.$store.commit('double/setDistributionMin', value);
+                },
+            },
+            distributionMax: {
+                get() {
+                    return this.$store.state.double.distributionMax;
+                },
+                set(value) {
+                    this.$store.commit('double/setDistributionMax', value);
+                },
+            },
             epsForMatrix() {
                 if (isNaN(parseFloat(this.eps)) || parseFloat(this.eps) === 0) {
                     return true;
@@ -220,7 +269,7 @@
                     renders.push(renderSvg(config));
                 }
                 return Promise.all(renders);
-            }
+            },
         },
         methods: {
             ...mapActions({

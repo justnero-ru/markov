@@ -3,6 +3,9 @@ import multi from './multi-reverse';
 
 const state = {
     eps: 0,
+    distribution: 'uniform',
+    distributionMin: 0,
+    distributionMax: 1,
 };
 
 // getters
@@ -35,24 +38,29 @@ const getters = {
 
 // actions
 const actions = {
-    test(context) {
-        const {size, steps, chains} = context.state.direct.model;
-        return context.dispatch('direct/test')
+    test({state, dispatch}) {
+        const {size, steps, chains} = state.direct.model;
+        const distributionConfig = {
+            distribution: state.distribution,
+            min: state.distributionMin,
+            max: state.distributionMax,
+        };
+        return dispatch('direct/test')
             .then(() => {
-                const transitions = context.state.direct.chains;
-                context.dispatch('multi/recover', {size, transitions, steps, chains});
+                const transitions = state.direct.chains;
+                dispatch('multi/recover', {size, transitions, steps, chains, distributionConfig});
             });
     },
-    clear(context, force = false) {
-        return context.dispatch('direct/clear', force)
+    clear({state, dispatch}, force = false) {
+        return dispatch('direct/clear', force)
             .then(() => {
-                if (!context.state.direct.isTested) {
-                    return context.dispatch('resetMulti');
+                if (!state.direct.isTested) {
+                    return dispatch('resetMulti');
                 }
             });
     },
-    resetMulti(context) {
-        return context.dispatch('multi/clear', true);
+    resetMulti({dispatch}) {
+        return dispatch('multi/clear', true);
     },
 };
 
@@ -60,6 +68,15 @@ const actions = {
 const mutations = {
     setEps(state, value) {
         state.eps = value;
+    },
+    setDistribution(state, value) {
+        state.distribution = value;
+    },
+    setDistributionMin(state, value) {
+        state.distributionMin = value;
+    },
+    setDistributionMax(state, value) {
+        state.distributionMax = value;
     },
 };
 
