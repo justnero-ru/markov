@@ -125,15 +125,21 @@ export default class MultiReverseMarkovChain {
     consumeTime() {
         const {distribution, A, B} = this.distributionConfig;
 
+        let value = 0;
         switch(distribution) {
             case 'normal':
-                return PD.rnorm(1, A, B)[0];
+                value = PD.rnorm(1, A, B)[0];
+                break;
             case 'log-normal':
-                return PD.rlnorm(1, A, B)[0];
+                value = PD.rlnorm(1, A, B)[0];
+                break;
             case 'uniform':
             default:
-                return PD.runif(1, A, B)[0];
+                value = PD.runif(1, A, B)[0];
+                break;
         }
+
+        return Math.abs(value);
     }
 
     static createMatrix(size) {
