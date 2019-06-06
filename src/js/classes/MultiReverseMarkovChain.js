@@ -1,6 +1,7 @@
 import Cell from './Cell';
 import Transition from './Transition';
 import * as PD from 'probability-distributions';
+import flatten from 'lodash.flatten';
 
 export default class MultiReverseMarkovChain {
     constructor(size, iterationsCount, transitions) {
@@ -33,7 +34,7 @@ export default class MultiReverseMarkovChain {
     }
 
     iteration(steps, chains) {
-        const transitions = this.transitions[this.generatedIterations].flat(),
+        const transitions = flatten(this.transitions[this.generatedIterations]),
             matrix = MultiReverseMarkovChain.createMatrix(this.size);
 
         for (let transition of transitions) {
