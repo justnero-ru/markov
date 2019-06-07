@@ -1,0 +1,11 @@
+.markov__chain {
+    padding-left: 0;
+    span {
+        + span {
+            &:before {
+                content: " \2192";
+                margin: 0 4px 0 6px;
+            }
+        }
+    }
+}

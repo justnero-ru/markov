@@ -1,14 +1,33 @@
 {
-  "name": "jetMarkov",
+  "name": "jet-markov",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint"
+    "lint": "vue-cli-service lint",
+    "size": "size-limit",
+    "size-why": "size-limit --why"
   },
   "dependencies": {
-    "vue": "^2.6.6"
+    "bootstrap": "^4.3.1",
+    "clipboard-copy": "^3.0.0",
+    "d3": "^5.9.2",
+    "dagre": "^0.8.4",
+    "dagre-d3": "^0.6.3",
+    "file-saver": "^2.0.1",
+    "font-awesome": "^4.7.0",
+    "fontawesome": "^5.6.3",
+    "graphlib": "^2.1.7",
+    "lodash.clonedeep": "^4.5.0",
+    "uuid": "^3.3.2",
+    "viz.js": "^2.1.2",
+    "vue": "^2.6.6",
+    "vue-async-computed": "^3.6.1",
+    "vue-router": "^3.0.1",
+    "vuex": "^3.0.1",
+    "vuex-persist": "^2.0.0",
+    "worker-loader": "^2.0.0"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "^3.5.0",
@@ -17,8 +36,16 @@
     "babel-eslint": "^10.0.1",
     "eslint": "^5.8.0",
     "eslint-plugin-vue": "^5.0.0",
+    "node-sass": "^4.11.0",
+    "sass-loader": "^7.1.0",
+    "size-limit": "^0.21.1",
     "vue-template-compiler": "^2.5.21"
   },
+  "size-limit": [
+    {
+      "path": "src/main.js"
+    }
+  ],
   "eslintConfig": {
     "root": true,
     "env": {
@@ -28,7 +55,6 @@
       "plugin:vue/essential",
       "eslint:recommended"
     ],
-    "rules": {},
     "parserOptions": {
       "parser": "babel-eslint"
     }
