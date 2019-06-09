@@ -1,5 +1,5 @@
 <template>
-    <svg :height="height" :width="width">
+    <svg class="model" :height="height" :width="width">
         <g :transform="transform"></g>
     </svg>
 </template>
@@ -24,16 +24,27 @@
             this.render();
         },
         computed: {
-            matrix() {
+            config() {
                 let state = this.$store.state;
                 this.namespace.split('/')
                     .forEach(path => state = state[path]);
 
-                return state.matrix;
+                return {
+                    matrix: state.matrix,
+                    states: state.states,
+                    transitions: this.$store.getters[`${this.namespace}/transitions`],
+                    transitionsNormalized: this.$store.getters[`${this.namespace}/transitionsNormalized`],
+                };
             },
             graph() {
-                return graph(this.size, this.matrix)
+                return graph(this.size, this.config);
             },
+            // tip() {
+            //     return d3.tip().attr('class', 'd3-tip').html(function (d) {
+            //         console.log(d);
+            //         return d;
+            //     });
+            // },
         },
         watch: {
             graph() {
@@ -43,8 +54,16 @@
         methods: {
             render() {
                 const g = this.graph;
+                // const tip = this.tip;
+                const svg = select(this.$el.children[0]);
 
-                this.renderer(select(this.$el.children[0]), g);
+                // svg.call(tip);
+
+                this.renderer(svg, g);
+
+                // svg.selectAll('.node')
+                // .on('mouseover', tip.show)
+                // .on('mouseout', tip.hide);
 
                 this.height = g.graph().height + 40;
                 this.width = g.graph().width + 40;
@@ -57,19 +76,89 @@
     }
 </script>
 
-<style>
-    .node rect,
-    .node circle,
-    .node ellipse,
-    .node polygon {
-        stroke: #333;
-        fill: #fff;
-        stroke-width: 1.5px;
+<style lang="scss">
+    svg.model {
+        overflow: visible;
     }
 
-    .edgePath path {
-        stroke: #333;
-        fill: #333;
-        stroke-width: 1.5px;
+    .node {
+        rect, circle, ellipse, polygon {
+            stroke: #333;
+            fill: #fff;
+            stroke-width: 1.5px;
+        }
+
+        &.state- {
+            &active {
+                rect, circle, ellipse, polygon {
+                    stroke: #007bff;
+                    stroke-width: 3px;
+
+                    + .label {
+                        color: #007bff;
+                        font-weight: bold;
+                    }
+                }
+            }
+
+            &previous {
+                rect, circle, ellipse, polygon {
+                    stroke: #007bff;
+                    fill: #6c757d;
+
+                    + .label {
+                        color: #fff;
+                    }
+                }
+            }
+        }
+
+        foreignObject {
+            overflow: visible;
+        }
+
+        .tooltip {
+            opacity: 0;
+            pointer-events: none;
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translate(-50%, 100%);
+            font-size: 10px;
+
+            min-width: 10rem;
+            padding: .5rem;
+            margin: .125rem 0 0;
+            color: #212529;
+            text-align: left;
+            list-style: none;
+            background-color: #fff;
+            background-clip: padding-box;
+            border: 1px solid rgba(0, 0, 0, .15);
+            border-radius: .25rem;
+        }
+
+        &:hover {
+            .tooltip {
+                opacity: 1;
+                pointer-events: all;
+            }
+        }
+    }
+
+    .edgePath {
+        path {
+            stroke: #333;
+            fill: #333;
+            stroke-width: 1.5px;
+        }
+
+        &.active {
+            path {
+                stroke: #007bff;
+                fill: #007bff;
+                stroke-width: 2px;
+            }
+        }
     }
 </style>

@@ -1,7 +1,6 @@
-import matrix from '@/store/modules/matrix'
+import model from '@/store/modules/model'
 
 const state = {
-    size: 1,
     steps: 10,
     chains: 5,
 };
@@ -35,6 +34,6 @@ export default {
     actions,
     mutations,
     modules: {
-        model: matrix,
+        model,
     }
 }

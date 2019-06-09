@@ -42,15 +42,27 @@ export default class Cell {
      * @returns {boolean}
      */
     static isValid(value) {
-        return value.length > 0 && !isNaN(Number(value)) && !(value.endsWith('.') || value.endsWith(','));
+        switch (typeof value) {
+            case 'number':
+                return !isNaN(value);
+            case 'string' :
+            default:
+                return value.length > 0
+                    && !isNaN(Number(value).valueOf())
+                    && !value.endsWith('.')
+                    && !value.endsWith(',');
+        }
     }
 
     /**
      * @param {{precision: number, value: number}} cell
      * @returns {string}
      */
-    static format(cell) {
-        return cell.value.toFixed(cell.precision);
+    static format({value, precision}) {
+        const val = Math.round(value / precision) * precision;
+        const fractionDigits = Math.ceil(Math.log10(1 / precision));
+
+        return val.toFixed(fractionDigits);
     }
 
     /**
