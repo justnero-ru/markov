@@ -1,11 +1,12 @@
 import Vue from 'vue'
 import Cell from '@/util/Cell'
-import State, {STATE_PREVIOUS} from '@/util/State'
+import State, {STATE_IDLE, STATE_PREVIOUS} from '@/util/State'
+import {utils, writeFile} from "xlsx";
 
 const state = {
     size: 2,
     matrix: [[Cell.empty(), Cell.empty()], [Cell.empty(), Cell.empty()]],
-    states: [State.empty(), State.empty()],
+    states: [State.build(STATE_IDLE, 1, 0), State.empty()],
     current: 0,
     chains: [[0]],
 };
@@ -63,10 +64,52 @@ const getters = {
         }
 
         return normalized;
-    }
+    },
+    plainMatrix({size, matrix, states}) {
+        const table = [];
+        const header = [''];
+        for (let i = 0; i < size; i++) {
+            header.push(`S${i}`);
+        }
+        table.push(['Размерность', size]);
+        table.push([]);
+
+        table.push(header);
+        let row = [];
+        for (let i = 0; i < size; i++) {
+            row = [`S${i}`];
+            for (let j = 0; j < size; j++) {
+                row.push(matrix[i][j].value);
+            }
+            table.push(row);
+        }
+        table.push([]);
+
+        const rows = [
+            ['Переходов'],
+            ['Время (общее)'],
+            ['Время (среднее)'],
+        ];
+        for (let i = 0; i < size; i++) {
+            rows[0].push(states[i].visits);
+            rows[1].push(states[i].time);
+            rows[2].push(states[i].visits > 0 ? states[i].time / states[i].visits : 0);
+        }
+        table.push(header);
+        rows.forEach(row => table.push(row));
+
+        return table;
+    },
 };
 
 const actions = {
+    saveMatrix({getters}) {
+        const wb = utils.book_new();
+        const ws = utils.aoa_to_sheet(getters.plainMatrix);
+
+        utils.book_append_sheet(wb, ws, 'Марковская модель');
+        writeFile(wb, 'model.xlsx');
+    },
     normalize({commit, getters}) {
         commit('replace', getters.normalized)
     },
@@ -75,7 +118,14 @@ const actions = {
     },
     async step({state, commit, dispatch}) {
         const from = state.current;
-        const to = await dispatch('getStep', {from});
+        let to = await dispatch('getStep', {from});
+        if (to === -1) {
+            commit('newChain');
+            to = await dispatch('getStep', {from});
+            if (to === -1) {
+                return false;
+            }
+        }
 
         return commit('step', {from, to});
     },
@@ -108,6 +158,7 @@ const mutations = {
     newChain(state) {
         state.chains.push([0]);
         state.current = 0;
+        state.states[0].visits++;
     },
     step(state, {from, to}) {
         for (let i = 0; i < state.size; i++) {
@@ -160,8 +211,8 @@ const mutations = {
         if (state.chains.length > 1 || state.chains[0].length > 1) {
             state.chains = [[0]];
             state.current = 0;
-            const states = [];
-            for (let i = 0; i < state.size; i++) {
+            const states = [State.build(STATE_IDLE, 1, 0)];
+            for (let i = 1; i < state.size; i++) {
                 states.push(State.empty());
             }
             Vue.set(state, 'states', states);

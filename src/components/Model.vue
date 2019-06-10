@@ -1,6 +1,6 @@
 <template>
-    <svg class="model" :height="height" :width="width">
-        <g :transform="transform"></g>
+    <svg ref="svg" class="model" :height="height" :width="width">
+        <g ref="g" :transform="transform"></g>
     </svg>
 </template>
 
@@ -39,12 +39,6 @@
             graph() {
                 return graph(this.size, this.config);
             },
-            // tip() {
-            //     return d3.tip().attr('class', 'd3-tip').html(function (d) {
-            //         console.log(d);
-            //         return d;
-            //     });
-            // },
         },
         watch: {
             graph() {
@@ -54,16 +48,9 @@
         methods: {
             render() {
                 const g = this.graph;
-                // const tip = this.tip;
-                const svg = select(this.$el.children[0]);
-
-                // svg.call(tip);
+                const svg = select(this.$refs.g);
 
                 this.renderer(svg, g);
-
-                // svg.selectAll('.node')
-                // .on('mouseover', tip.show)
-                // .on('mouseout', tip.hide);
 
                 this.height = g.graph().height + 40;
                 this.width = g.graph().width + 40;
@@ -113,7 +100,7 @@
             }
         }
 
-        foreignObject {
+        .label > g > * {
             overflow: visible;
         }
 
@@ -122,8 +109,8 @@
             pointer-events: none;
             position: absolute;
             bottom: 0;
-            left: 50%;
-            transform: translate(-50%, 100%);
+            right: 0;
+            transform: translate(0, 100%);
             font-size: 10px;
 
             min-width: 10rem;
@@ -136,6 +123,33 @@
             background-clip: padding-box;
             border: 1px solid rgba(0, 0, 0, .15);
             border-radius: .25rem;
+
+            dl {
+                display: flex;
+                flex-wrap: wrap;
+                margin: 0;
+
+                dt, dd {
+                    display: block;
+                    margin-bottom: 0;
+                }
+
+                dt {
+                    flex-grow: 1;
+
+                    ~ dt {
+                        margin-top: .5rem;
+                    }
+                }
+
+                dd {
+                    flex-shrink: 1;
+
+                    ~ dd {
+                        margin-top: .5rem;
+                    }
+                }
+            }
         }
 
         &:hover {

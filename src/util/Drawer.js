@@ -40,7 +40,14 @@ export function graph(size, {matrix, states, transitions, transitionsNormalized}
 export function nodeLabel(i, state) {
     let label = `S<sub>${i}</sub>`;
     if (state) {
-        label += `<div class="tooltip">Посещена: <b>${state.visits}</b></div>`;
+        let tooltip = [];
+        const {visits, time} = state;
+        const timeMean = visits === 0 ? 0 : time / visits;
+        tooltip.push(`<dt>Посещена:</dt><dd>${visits}</dd>`);
+        tooltip.push(`<dt>Время (общее):</dt><dd>${time}</dd>`);
+        tooltip.push(`<dt>Время (среднее):</dt><dd>${timeMean.toFixed(2)}</dd>`);
+
+        label += `<div class="tooltip"><dl>${tooltip.join('')}</dl></div>`;
     }
 
     return label;
