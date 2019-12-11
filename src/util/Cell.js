@@ -62,12 +62,12 @@ export default class Cell {
         const val = Math.round(value / precision) * precision;
         const fractionDigits = Math.ceil(Math.log10(1 / precision));
 
-        return val.toFixed(fractionDigits);
+        return val.toFixed(fractionDigits).replace(/\.?[0]+$/, '');
     }
 
     /**
-     * @param cell
-     * @param factor
+     * @param {{precision: number, value: number}} cell
+     * @param {number} factor
      * @returns {{precision: number, value: number}}
      */
     static normalized({value = 0, precision = CELL_PRECISION}, factor) {

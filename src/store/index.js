@@ -1,8 +1,10 @@
 import Vue from 'vue'
-import direct from './modules/direct'
+import direct from '@/store/modules/direct'
+import reverse from '@/store/modules/reverse'
+import research from '@/store/modules/research'
 import VuexPersist from 'vuex-persist'
-import createLogger from "vuex/dist/logger"
-import Vuex from "vuex"
+import createLogger from 'vuex/dist/logger'
+import Vuex from 'vuex'
 
 Vue.use(Vuex);
 
@@ -15,6 +17,8 @@ const vuexPersist = new VuexPersist({
 export default new Vuex.Store({
     modules: {
         direct,
+        reverse,
+        research,
     },
     strict: debug,
     plugins: [vuexPersist.plugin, ...(debug ? [createLogger()] : [])],

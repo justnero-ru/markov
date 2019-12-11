@@ -5,14 +5,14 @@ import store from '@/store/index'
 import AsyncComputed from 'vue-async-computed';
 import {DropdownPlugin, VBTooltip} from 'bootstrap-vue'
 import {library} from '@fortawesome/fontawesome-svg-core'
-import {faWalking, faPlay, faEquals, faSave, faEraser} from '@fortawesome/free-solid-svg-icons'
+import {faWalking, faPlay, faEquals, faSave, faEraser, faCaretUp, faCaretDown, faCopy} from '@fortawesome/free-solid-svg-icons'
 import {FontAwesomeIcon} from '@fortawesome/vue-fontawesome'
 
-library.add(faWalking, faPlay, faEquals, faSave, faEraser);
+library.add(faWalking, faPlay, faEquals, faSave, faEraser, faCaretUp, faCaretDown, faCopy);
 
 Vue.use(AsyncComputed);
-Vue.directive('b-tooltip', VBTooltip);
 Vue.use(DropdownPlugin);
+Vue.directive('b-tooltip', VBTooltip);
 Vue.component('fa-icon', FontAwesomeIcon);
 
 Vue.config.productionTip = false;

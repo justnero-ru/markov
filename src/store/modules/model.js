@@ -1,7 +1,7 @@
 import Vue from 'vue'
 import Cell from '@/util/Cell'
 import State, {STATE_IDLE, STATE_PREVIOUS} from '@/util/State'
-import {utils, writeFile} from "xlsx";
+import {getStep} from "@/util/Model";
 
 const state = {
     size: 2,
@@ -11,20 +11,33 @@ const state = {
     chains: [[0]],
 };
 
+const normalize = function ({matrix, size}) {
+    const normalized = [];
+    for (let i = 0; i < size; i++) {
+        const row = [];
+        const sum = matrix[i].reduce((sum, cell) => sum + cell.value, 0);
+        for (let j = 0; j < size; j++) {
+            if (sum) {
+                row.push(Cell.normalized(matrix[i][j], sum));
+            } else {
+                row.push(Cell.empty());
+            }
+        }
+        normalized.push(row);
+    }
+
+    return normalized;
+};
+
 const getters = {
     normalized({matrix, size}) {
+        return normalize({matrix, size});
+    },
+    statesNormalized({states, size}) {
         const normalized = [];
+        const sum = states.reduce((sum, state) => sum + state.visits, 0);
         for (let i = 0; i < size; i++) {
-            const row = [];
-            const sum = matrix[i].reduce((sum, cell) => sum + parseInt(cell.value), 0);
-            for (let j = 0; j < size; j++) {
-                if (sum) {
-                    row.push(Cell.normalized(matrix[i][j], sum));
-                } else {
-                    row.push(Cell.empty());
-                }
-            }
-            normalized.push(row);
+            normalized.push(State.normalized(states[i], sum));
         }
 
         return normalized;
@@ -49,10 +62,13 @@ const getters = {
         return transitions;
     },
     transitionsNormalized({size}, {transitions}) {
-        const normalized = [];
+        return normalize({matrix: transitions, size});
+    },
+    frequency({size}, {transitions}) {
+        const frequency = [];
+        const sum = transitions.reduce((sum, row) => sum + row.reduce((sum, cell) => sum + cell.value, 0), 0);
         for (let i = 0; i < size; i++) {
             const row = [];
-            const sum = transitions[i].reduce((sum, cell) => sum + parseInt(cell.value), 0);
             for (let j = 0; j < size; j++) {
                 if (sum) {
                     row.push(Cell.normalized(transitions[i][j], sum));
@@ -60,68 +76,55 @@ const getters = {
                     row.push(Cell.empty());
                 }
             }
-            normalized.push(row);
+            frequency.push(row);
         }
 
-        return normalized;
+        return frequency;
     },
-    plainMatrix({size, matrix, states}) {
-        const table = [];
-        const header = [''];
-        for (let i = 0; i < size; i++) {
-            header.push(`S${i}`);
-        }
-        table.push(['Размерность', size]);
-        table.push([]);
-
-        table.push(header);
-        let row = [];
-        for (let i = 0; i < size; i++) {
-            row = [`S${i}`];
-            for (let j = 0; j < size; j++) {
-                row.push(matrix[i][j].value);
-            }
-            table.push(row);
-        }
-        table.push([]);
-
-        const rows = [
-            ['Переходов'],
-            ['Время (общее)'],
-            ['Время (среднее)'],
-        ];
-        for (let i = 0; i < size; i++) {
-            rows[0].push(states[i].visits);
-            rows[1].push(states[i].time);
-            rows[2].push(states[i].visits > 0 ? states[i].time / states[i].visits : 0);
-        }
-        table.push(header);
-        rows.forEach(row => table.push(row));
-
-        return table;
+    transitionsPlain({chains}) {
+        return chains.map(chain => chain.join(' ')).join('\n');
+    },
+    transitionsHumanized({chains}) {
+        return chains.map(chain => chain.join(' ↠ '));
     },
 };
 
 const actions = {
-    saveMatrix({getters}) {
-        const wb = utils.book_new();
-        const ws = utils.aoa_to_sheet(getters.plainMatrix);
-
-        utils.book_append_sheet(wb, ws, 'Марковская модель');
-        writeFile(wb, 'model.xlsx');
-    },
     normalize({commit, getters}) {
         commit('replace', getters.normalized)
     },
     clear({commit}) {
         commit('clear');
     },
-    async step({state, commit, dispatch}) {
+    test({state, commit, getters}, {steps, chains}) {
+        const states = [];
+        const chain = [];
+        for (let i = 0; i < state.size; i++) {
+            states.push(State.empty());
+        }
+        for (let i = 0; i < chains; i++) {
+            let current = 0;
+            let next = -1;
+            chain.push([current]);
+            states[current].visits++;
+            for (let j = 0; j < steps && current !== -1; j++) {
+                next = getStep({size: state.size, normalized: getters.normalized}, {from: current});
+                if (next !== -1) {
+                    chain[i].push(next);
+                    states[next].visits++;
+                }
+                current = next;
+            }
+        }
+
+        return commit('setBatch', {states, chains: chain});
+    },
+    async step({state, commit, getters}) {
         const from = state.current;
-        let to = await dispatch('getStep', {from});
+        let to = getStep({size: state.size, normalized: getters.normalized}, {from});
         if (to === -1) {
             commit('newChain');
-            to = await dispatch('getStep', {from});
+            to = getStep({size: state.size, normalized: getters.normalized}, {from});
             if (to === -1) {
                 return false;
             }
@@ -129,32 +132,14 @@ const actions = {
 
         return commit('step', {from, to});
     },
-    async getStep({state, dispatch}, {from}) {
-        if (from >= state.size) {
-            throw new Error('From can\'t be greater than model size');
-        }
-
-        const rnd = Math.random();
-        return dispatch('getDestination', {from, rnd});
-    },
-    getDestination({state, getters}, {from, rnd}) {
-        if (from >= state.size) {
-            throw new Error('From can\'t be greater than model size');
-        }
-
-        let left = rnd;
-        for (let to = 0; to < state.size; to++) {
-            if (getters.normalized[from][to].value > 0 && getters.normalized[from][to].value >= left) {
-                return to;
-            }
-            left -= getters.normalized[from][to].value;
-        }
-
-        return -1;
-    },
 };
 
 const mutations = {
+    setBatch(state, {states, chains}) {
+        state.current = -1;
+        state.states = states;
+        state.chains = chains;
+    },
     newChain(state) {
         state.chains.push([0]);
         state.current = 0;
@@ -177,6 +162,32 @@ const mutations = {
         if (Cell.isValid(value)) {
             Vue.set(matrix[x], y, Cell.alter(matrix[x][y], value));
         }
+    },
+    setTransitionsPlain(state, transitions) {
+        const matrix = [];
+        for (let i = 0; i < state.size; i++) {
+            const row = [];
+            for (let j = 0; j < state.size; j++) {
+                row.push(0);
+            }
+            matrix.push(row);
+        }
+        transitions.split('\n')
+            .forEach(chain => {
+                const transitions = chain.split(' ').map(vertex => Number.parseInt(vertex));
+                for (let i = 0; i < transitions.length - 1; i++) {
+                    const from = transitions[i];
+                    const to = transitions[i + 1];
+                    matrix[from][to]++;
+                }
+            });
+        for (let i = 0; i < state.size; i++) {
+            const rowTotal = matrix[i].reduce((sum, value) => sum + value, 0);
+            for (let j = 0; j < state.size; j++) {
+                matrix[i][j] = Cell.build(rowTotal ? matrix[i][j] / rowTotal : 0);
+            }
+        }
+        Vue.set(state, 'matrix', matrix);
     },
     replace(state, newMatrix) {
         Vue.set(state, 'matrix', newMatrix);
@@ -236,4 +247,7 @@ export default {
     getters,
     actions,
     mutations,
+    functions: {
+        normalize,
+    },
 }

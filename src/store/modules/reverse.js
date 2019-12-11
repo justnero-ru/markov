@@ -4,6 +4,7 @@ import {utils, writeFile} from 'xlsx';
 const state = {
     steps: 10,
     chains: 5,
+    transitionsPlain: '',
 };
 
 const getters = {
@@ -117,6 +118,9 @@ const actions = {
     normalize({commit, getters}) {
         commit('replace', getters.normalized)
     },
+    clear({commit}) {
+        commit('clear');
+    },
 };
 
 const mutations = {
@@ -125,6 +129,9 @@ const mutations = {
     },
     setSteps(state, value) {
         state.steps = value;
+    },
+    setTransitionsPlain(state, value) {
+        state.transitionsPlain = value;
     },
 };
 

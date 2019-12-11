@@ -31,6 +31,15 @@ export default class State {
 
     /**
      * @param {{mode: string, visits: number, time: number}} state
+     * @param {number} factor
+     * @returns {{mode: string, visits: number, time: number}}
+     */
+    static normalized(state, factor) {
+        return this.override(state, {visits: factor !== 0 ? state.visits / factor : 0});
+    }
+
+    /**
+     * @param {{mode: string, visits: number, time: number}} state
      * @returns {{mode: string, visits: number, time: number}}
      */
     static idle(state) {
