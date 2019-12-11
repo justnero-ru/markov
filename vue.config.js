@@ -1,7 +1,7 @@
 module.exports = {
   lintOnSave: undefined,
-  publicPath: undefined,
-  outputDir: undefined,
+  publicPath: 'markov',
+  outputDir: 'docs',
   assetsDir: 'assets',
   runtimeCompiler: undefined,
   productionSourceMap: undefined,
@@ -10,4 +10,4 @@ module.exports = {
   css: {
     sourceMap: true
   }
-}
+};
