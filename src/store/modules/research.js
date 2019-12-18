@@ -124,7 +124,7 @@ const getters = {
 
         return sheet;
     },
-    resultTable({model}, getters) {
+    resultTable({chains, model}, getters) {
         const table = [];
         let row;
 
@@ -140,7 +140,7 @@ const getters = {
         ];
         for (let i = 0; i < model.size; i++) {
             const s = model.states[i];
-            rows[0].push(s.visits);
+            rows[0].push(s.visits - (i === 0 ? chains : 0));
             rows[1].push(s.time);
             rows[2].push(s.visits > 0 ? s.time / s.visits : 0);
         }

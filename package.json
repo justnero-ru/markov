@@ -5,6 +5,7 @@
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
+    "bundle": "VUE_OUTPUT_DIR='markov' VUE_PUBLIC_PATH='.' yarn build && zip -qrX markov.zip markov && rm -rf bundle && mv markov bundle",
     "lint": "vue-cli-service lint",
     "size": "size-limit",
     "size-why": "size-limit --why"
@@ -24,7 +25,6 @@
     "font-awesome": "^4.7.0",
     "fontawesome": "^5.6.3",
     "graphlib": "^2.1.7",
-    "lodash.clonedeep": "^4.5.0",
     "probability-distributions": "^0.9.1",
     "uuid": "^3.3.2",
     "viz.js": "^2.1.2",
