@@ -220,6 +220,7 @@
         user-select: none;
     }
 
+    // Changing this will require changing static css in svg.js
     .node {
         rect, circle, ellipse, polygon {
             stroke: #333;
@@ -255,13 +256,6 @@
         .label > g > * {
             overflow: visible;
         }
-
-        /*&:hover {*/
-        /*    .tooltip {*/
-        /*        opacity: 1;*/
-        /*        pointer-events: all;*/
-        /*    }*/
-        /*}*/
     }
 
     .edgePath {

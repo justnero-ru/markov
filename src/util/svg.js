@@ -1,3 +1,38 @@
+const STATIC_CSS = `.node rect, .node circle, .node ellipse, .node polygon {
+  stroke: #333;
+  fill: #fff;
+  stroke-width: 1.5px;
+}
+.node.state-active rect, .node.state-active circle, .node.state-active ellipse, .node.state-active polygon {
+  stroke: #007bff;
+  stroke-width: 3px;
+}
+.node.state-active rect + .label, .node.state-active circle + .label, .node.state-active ellipse + .label, .node.state-active polygon + .label {
+  color: #007bff;
+  font-weight: bold;
+}
+.node.state-previous rect, .node.state-previous circle, .node.state-previous ellipse, .node.state-previous polygon {
+  stroke: #007bff;
+  fill: #6c757d;
+}
+.node.state-previous rect + .label, .node.state-previous circle + .label, .node.state-previous ellipse + .label, .node.state-previous polygon + .label {
+  color: #fff;
+}
+.node .label > g > * {
+  overflow: visible;
+}
+
+.edgePath path {
+  stroke: #333;
+  fill: #333;
+  stroke-width: 1.5px;
+}
+.edgePath.active path {
+  stroke: #007bff;
+  fill: #007bff;
+  stroke-width: 2px;
+}`;
+
 export function extractSelectors(element) {
     const selectors = [];
 
@@ -60,7 +95,7 @@ export function extractCSS(parentElement) {
 
 export function extractSvg(node) {
     node.setAttribute('xlink', 'http://www.w3.org/1999/xlink');
-    const css = extractCSS(node);
+    const css = STATIC_CSS;//extractCSS(node);
     const styleElement = document.createElement('style');
     styleElement.setAttribute('type', 'text/css');
     styleElement.innerHTML = css;

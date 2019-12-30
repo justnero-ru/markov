@@ -10,7 +10,7 @@ Vue.use(Vuex);
 
 const debug = process.env.NODE_ENV !== 'production';
 const vuexPersist = new VuexPersist({
-    key: 'markov',
+    key: 'jetMarkov',
     storage: localStorage
 });
 

@@ -33,10 +33,14 @@ const getters = {
     normalized({matrix, size}) {
         return normalize({matrix, size});
     },
-    statesNormalized({states, size}) {
+    statesNormalized(state) {
+        const {states, size} = state;
         const normalized = [];
         const sum = states.reduce((sum, state) => sum + state.visits, 0);
         for (let i = 0; i < size; i++) {
+            if(typeof states[i] === 'undefined') {
+                console.log(state);
+            }
             normalized.push(State.normalized(states[i], sum));
         }
 
